@@ -5,8 +5,6 @@
 
 
 
-
-
 #define MBEDTLS_PSA_CRYPTO_C
 #define MBEDTLS_USE_PSA_CRYPTO
 #define MBEDTLS_CIPHER_C
@@ -17,10 +15,24 @@
 
 #include "config-device-acceleration.h"
 
+#if defined(SL_SE_ASSUME_FW_AT_LEAST_1_2_10) || defined(SL_SE_ASSUME_FW_AT_LEAST_2_1_7)
+    #undef MBEDTLS_ECP_DP_CURVE25519_ENABLED
+    #if !(defined(MBEDTLS_ECP_DP_SECP192R1_ENABLED) \
+          || defined(MBEDTLS_ECP_DP_SECP224R1_ENABLED) \
+          || defined(MBEDTLS_ECP_DP_SECP256R1_ENABLED) \
+          || defined(MBEDTLS_ECP_DP_SECP384R1_ENABLED) \
+          || defined(MBEDTLS_ECP_DP_SECP521R1_ENABLED))
+        #undef MBEDTLS_ECDH_C
+        #undef MBEDTLS_ECP_C
+        #undef MBEDTLS_BIGNUM_C
+    #endif /* !MBEDTLS_ECP_DP_SECPxR1_ENABLED */
+#endif /* SL_SE_ASSUME_FW_AT_LEAST_x */
+
 #if !defined(TEST_SUITE_MEMORY_BUFFER_ALLOC)
 #if !defined(MBEDTLS_PLATFORM_FREE_MACRO) && !defined(MBEDTLS_PLATFORM_CALLOC_MACRO)
-#if defined(CONFIG_MEDTLS_USE_AFR_MEMORY)
-    /* Amazon FreeRTOS requires custom memory allocator hooks */
+#if defined(CONFIG_MBEDTLS_USE_FREERTOS_PVCALLOC)
+    /* In FreeRTOS, use pvCalloc (and vPortFree) for dynamic memory allocation.
+       E.g. Amazon FreeRTOS implements pvCalloc for dynamic memory allocation. */
     #include <stddef.h>
 
     extern void * pvCalloc( size_t xNumElements,
@@ -40,5 +52,7 @@
 
 #define MBEDTLS_PLATFORM_MEMORY
 #define MBEDTLS_PLATFORM_C
+
+
 
 #endif

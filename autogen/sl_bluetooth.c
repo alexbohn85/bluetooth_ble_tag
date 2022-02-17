@@ -49,12 +49,15 @@ void sl_bt_init(void)
   NVIC_ClearPendingIRQ(PendSV_IRQn);
   NVIC_EnableIRQ(PendSV_IRQn);
 #endif
+  sl_bt_configure_backwards_compatibility(&config);
+
   // Stack initialization could fail, e.g., due to out of memory.
   // The failure could not be returned to user yet as the system initialization
   // does not return an error code.
   sl_status_t err = sl_bt_init_stack(&config);
   (void) err;
   sl_bt_init_classes(bt_class_table);
+  sl_bt_init_on_demand_start();
 }
 
 SL_WEAK void sl_bt_on_event(sl_bt_msg_t* evt)

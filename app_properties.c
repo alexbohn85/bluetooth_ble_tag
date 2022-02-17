@@ -29,6 +29,8 @@
  ******************************************************************************/
 
 #include <api/application_properties.h>
+#include "app_properties.h"
+#include "tag_defines.h"
 
 #if defined(__IAR_SYSTEMS_ICC__)
 /* IAR ICC */
@@ -40,10 +42,7 @@
   #define KEEP_SYMBOL
 #endif
 
-/// Version number for this application (uint32_t)
-#define APP_PROPERTIES_VERSION 1
-/// Unique ID (e.g. UUID or GUID) for the product this application is built for (uint8_t[16])
-#define APP_PROPERTIES_ID { 0 }
+
 
 KEEP_SYMBOL const ApplicationProperties_t sl_app_properties = {
   /// @brief Magic value indicating that this is an ApplicationProperties_t struct.
@@ -60,10 +59,13 @@ KEEP_SYMBOL const ApplicationProperties_t sl_app_properties = {
     /// Bitfield representing type of application, e.g. @ref APPLICATION_TYPE_BLUETOOTH_APP
     .type = APPLICATION_TYPE_BLUETOOTH_APP,
     /// Version number for this application
-    .version = APP_PROPERTIES_VERSION,
+    .version = FW_REV,
     /// Capabilities of this application
     .capabilities = 0,
     /// Unique ID (e.g. UUID or GUID) for the product this application is built for
-    .productId = APP_PROPERTIES_ID,
+    .productId = TAG_TYPE_ID,
   },
 };
+
+
+

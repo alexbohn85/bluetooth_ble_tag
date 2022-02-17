@@ -71,7 +71,7 @@
 // <i> When this configuration is passed into stack initialization, the stack
 // <i> will select the closest value that the device supports.
 // <i> API sl_bt_system_get_tx_power_setting() can be used to query the selected value.
-#define SL_BT_CONFIG_MAX_TX_POWER     (0)
+#define SL_BT_CONFIG_MAX_TX_POWER     (80)
 
 // </h> End TX Power Levels
 
@@ -81,8 +81,9 @@
 // <i> Default: 0
 // <i> The Bluetooth stack takes TX RF path gain into account when adjusting transmitter
 // <i> output power. Power radiated from the antenna then matches the application request.
-// <i> For example, with radiated TX power set to +10 dBm and RF TX path
-// <i> gain to -1 dBm, the transmitter output power will be set to +11 dBm.
+// <i> A negative value indicates some power loss in the path. For example,
+// <i> with radiated TX power set to +10 dBm and this configuration to -10
+// <i> (i.e., 1 dBm loss), the transmitter output power will be set to +11 dBm.
 #define SL_BT_CONFIG_RF_PATH_GAIN_TX     (0)
 
 // <o SL_BT_CONFIG_RF_PATH_GAIN_RX> RF RX path gain in 0.1dBm unit

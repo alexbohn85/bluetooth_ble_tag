@@ -60,7 +60,7 @@
 
 // <o SL_POWER_MANAGER_DEBUG_POOL_SIZE> Maximum numbers of requirements that can be logged
 // <i> Default: 10
-#define SL_POWER_MANAGER_DEBUG_POOL_SIZE  10
+#define SL_POWER_MANAGER_DEBUG_POOL_SIZE  20
 // </e>
 
 // </h>

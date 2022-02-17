@@ -1,0 +1,58 @@
+# Silicon Labs Project Configuration Tools: slcp, v0, Component selection file.
+project_name: UT3_SDK4010
+label: UT3_SDK4010
+description: |
+  A minimal project structure, that serves as a starting point for custom Bluetooth applications. It contains a minimal GATT database that can be expanded to fit your application requirements. The application starts advertising after boot and restarts advertising after a connection is closed. It also supports Over-the-Air Device Firmware Upgrade (OTA DFU).
+category: Bluetooth Examples
+package: Bluetooth
+quality: production
+readme:
+- {path: ''}
+source:
+- {path: main.c}
+tag: ['hardware:rf:band:2400']
+include:
+- path: ''
+  file_list:
+  - {path: app.h}
+sdk: {id: gecko_sdk, version: 4.0.1}
+toolchain_settings: []
+component:
+- {id: EFR32BG22C222F352GM32}
+- {id: iostream_retarget_stdio}
+- {id: bluetooth_feature_connection}
+- {id: bluetooth_feature_gatt_server}
+- {id: bluetooth_feature_advertiser}
+- instance: [uart_debug]
+  id: iostream_usart
+- {id: bluetooth_feature_sm}
+- {id: emlib_wdog}
+- {id: bluetooth_feature_system}
+- {id: gatt_configuration}
+- {id: device_init_lfxo}
+- {id: bluetooth_feature_scanner}
+- {id: bluetooth_stack}
+- {id: component_catalog}
+- {id: ota_dfu}
+- {id: bluetooth_on_demand_start}
+- instance: [as39_spi]
+  id: spidrv
+- {id: iostream_stdlib_config}
+- {id: bootloader_interface}
+- {id: app_assert}
+- {id: bluetooth_feature_gatt}
+- {id: udelay}
+other_file:
+- {path: create_bl_files.bat}
+- {path: create_bl_files.sh}
+configuration:
+- {name: SL_STACK_SIZE, value: '2752'}
+- {name: SL_HEAP_SIZE, value: '9200'}
+- condition: [psa_crypto]
+  name: SL_PSA_KEY_USER_SLOT_COUNT
+  value: '0'
+ui_hints:
+  highlight:
+  - {path: '', focus: true}
+  - {path: config/btconf/gatt_configuration.btconf}
+
