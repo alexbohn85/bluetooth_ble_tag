@@ -40,8 +40,9 @@ void RTCC_IRQHandler(void)
     CORE_ENTER_ATOMIC();
     irq_flag = RTCC_IntGet();
 
-    // Clear RTCC flags
+    //! Clear RTCC flags
     RTCC_IntClear(irq_flag & (RTCC_IF_CC0 | RTCC_IF_CC1 | RTCC_IF_CC2));
+    NVIC_ClearPendingIRQ(RTCC_IRQn);
 
 #if 1
     //! Capture/Compare 0 handler - LF Decoder

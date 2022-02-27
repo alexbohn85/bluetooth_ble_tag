@@ -6,6 +6,7 @@
 #include "stdio.h"
 #include "stdbool.h"
 #include "stdarg.h"
+#include "em_gpio.h"
 #include "sl_sleeptimer.h"
 #include "sl_iostream.h"
 #include "sl_iostream_init_usart_instances.h"
@@ -14,6 +15,7 @@
 #include "tag_main_machine.h"
 #include "ble_manager_machine.h"
 #include "temperature_machine.h"
+#include "boot.h"
 #include "dbg_utils.h"
 #include "git_log.h"
 
@@ -271,16 +273,15 @@ uint32_t tag_get_fw_revision(void)
 //! @brief Called right after waking up
 void EMU_EFPEM23PresleepHook(void)
 {
-    // Debug
-    //GPIO_PinOutClear(BOOTSEL_B2_PORT, BOOTSEL_B2_PIN);
-    //CMU_ClockDivSet(cmuClock_CORE, 16);
+    //TODO Debugging LF
+    GPIO_PinOutClear(BOOTSEL_B2_PORT, BOOTSEL_B2_PIN);
 }
 
 //! @brief Called right after waking up
 void EMU_EFPEM23PostsleepHook(void)
 {
-    // Debug
-    //GPIO_PinOutSet(BOOTSEL_B2_PORT, BOOTSEL_B2_PIN);
+    //TODO Debugging LF
+    GPIO_PinOutSet(BOOTSEL_B2_PORT, BOOTSEL_B2_PIN);
 }
 
 
