@@ -175,7 +175,7 @@ void tag_main_run(void)
     {
         case TMM_NORMAL_MODE:
             tmm_slow_tasks_run();
-            //lf_run();
+            lf_run();
             //tag_beacon_run();
             ble_manager_run();
             break;

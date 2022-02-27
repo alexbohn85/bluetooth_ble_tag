@@ -49,7 +49,7 @@
 #define LF_RTCC_CC0                  (0)            //!  LF decoder uses RTCC Capture/Compare channel 0
 #define LF_NUMBER_OF_BITS            (24)           //!  # of bits in the LF dataframe
 #define LF_FALSE_WAKEUP_TIMEOUT      (492)          //!  ~15 mS
-#define LF_CRC_OK_TIMEOUT            (32768)        //!  ~1000 mS
+#define LF_CRC_OK_TIMEOUT            (32768)        //!  ~1500 mS
 
 
 //#define LF_TOL_TIGHT
@@ -69,7 +69,8 @@
 #endif
 
 #if defined(LF_TOL_RELAXED)
-#define LF_PREAMBLE_L                (49)           //!  ~1.500 mS
+//#define LF_PREAMBLE_L                (49)           //!  ~1.500 mS
+#define LF_PREAMBLE_L                (165)           //!  ~1.500 mS
 #define LF_PREAMBLE_H                (200)          //!  ~6.100 mS
 #define LF_START_BIT_GAP_MIN         (41)           //!  ~1.250 mS
 #define LF_START_BIT_GAP_MAX         (45)           //!  ~1.350 mS
@@ -90,6 +91,7 @@ typedef enum lf_decoder_rtcc_modes_t {
 
 typedef enum lf_decoder_states_t {
     PREAMBLE = 0,
+    PREAMBLE_END,
     START_BIT_GAP,
     START_BIT,
     DATA,
@@ -170,11 +172,11 @@ void lf_decoder_clear_lf_data(void)
 //!-----------------------------------------------------------------------------
 //!-----------------------------------------------------------------------------
 
-void lf_decoder_rtcc_cc0_config(lf_decoder_rtcc_modes_t mode, uint32_t timeout)
+void lf_decoder_rtcc_cc0_config(lf_decoder_rtcc_modes_t mode, uint32_t timeout, RTCC_InEdgeSel_TypeDef edge)
 {
     if (mode == LF_RTCC_CAPTURE) {
         RTCC_CCChConf_TypeDef cc0_cfg = RTCC_CH_INIT_CAPTURE_DEFAULT;
-        cc0_cfg.inputEdgeSel = rtccInEdgeBoth;
+        cc0_cfg.inputEdgeSel = edge;
         cc0_cfg.prsSel = PRS_LF_CH;
         RTCC_ChannelInit(LF_RTCC_CC0, &cc0_cfg);
 
@@ -186,9 +188,36 @@ void lf_decoder_rtcc_cc0_config(lf_decoder_rtcc_modes_t mode, uint32_t timeout)
         uint32_t timer_offset = timeout + RTCC_CounterGet();
         RTCC_ChannelCompareValueSet(LF_RTCC_CC0, timer_offset);
     }
+
+    RTCC_IntClear(RTCC_IF_CC0);
 }
 
+void lf_decoder_compare_start(uint32_t timeout)
+{
+    lf_decoder_rtcc_cc0_config(LF_RTCC_COMPARE, timeout, rtccInEdgeNone);
+}
 
+void lf_decoder_capture_start(void)
+{
+    CORE_DECLARE_IRQ_STATE;
+    CORE_ENTER_CRITICAL();
+    decoder.state = PREAMBLE;
+    lf_decoder_rtcc_cc0_config(LF_RTCC_CAPTURE, 0, rtccInEdgeRising);
+    as39_antenna_enable(true, false, false);
+    CORE_EXIT_CRITICAL();
+
+}
+
+void lf_decoder_reset_and_backoff(uint32_t timeout)
+{
+    CORE_DECLARE_IRQ_STATE;
+    CORE_ENTER_CRITICAL();
+    as39_antenna_enable(false, false, false);
+    CORE_EXIT_CRITICAL();
+    lf_decoder_compare_start(timeout);
+}
+
+RAMFUNC_DECLARATOR
 void lf_decoder_crc(uint8_t bit)
 {
     if ((decoder.crc ^ (bit << 1)) & 0x02) {
@@ -197,51 +226,24 @@ void lf_decoder_crc(uint8_t bit)
         decoder.crc = decoder.crc >> 1;
     }
 }
+RAMFUNC_DEFINITION_END
 
-void lf_decoder_compare_start(uint32_t timeout)
-{
-    lf_decoder_rtcc_cc0_config(LF_RTCC_COMPARE, timeout);
-    RTCC_IntClear(RTCC_IEN_CC0);
-    NVIC_ClearPendingIRQ(RTCC_IRQn);
-    //RTCC_IntEnable(RTCC_IEN_CC0);
-    //NVIC_EnableIRQ(RTCC_IRQn);
-}
-
-void lf_decoder_capture_start(void)
-{
-    lf_decoder_rtcc_cc0_config(LF_RTCC_CAPTURE, 0);
-    //NVIC_ClearPendingIRQ(RTCC_IRQn);
-    //RTCC_IntEnable(RTCC_IEN_CC0);
-    //RTCC_IntClear(RTCC_IEN_CC0);
-    //NVIC_EnableIRQ(RTCC_IRQn);
-}
-
-void lf_decoder_reset_and_backoff(uint32_t timeout)
-{
-    as39_antenna_enable(false, false, false);
-    lf_decoder_compare_start(timeout);
-}
-
-#if 0
-void lf_decoder_capture_stop(void)
-{
-    RTCC_IntDisable(RTCC_IEN_CC0);
-    RTCC_IntClear(RTCC_IEN_CC0);
-    NVIC_ClearPendingIRQ(RTCC_IRQn);
-    NVIC_DisableIRQ(RTCC_IRQn);
-    //RTCC_Stop();
-}
-#endif
-
+RAMFUNC_DECLARATOR
 void lf_decoder_compare_isr(void)
 {
-    decoder.state = PREAMBLE;
     lf_decoder_capture_start();
-    decoder.prev_edge = RTCC_ChannelCaptureValueGet(LF_RTCC_CC0);
-    as39_antenna_enable(true, false, false);
-    decoder.errors = 0;
+}
+RAMFUNC_DEFINITION_END
+
+void lf_debug_toggle(uint8_t mult)
+{
+    uint16_t i;
+    GPIO_PinOutSet(BOOTSEL_B1_PORT, BOOTSEL_B1_PIN);
+    for (i = 5*mult; i > 0; i--);
+    GPIO_PinOutClear(BOOTSEL_B1_PORT, BOOTSEL_B1_PIN);
 }
 
+RAMFUNC_DECLARATOR
 void lf_decoder_capture_isr(void)
 {
 
@@ -261,9 +263,10 @@ void lf_decoder_capture_isr(void)
 
     //! TODO Testing using error counter in the PREAMBLE and start bit to try to distinguish noise from weak field.
     //! TODO Compare performance not using on/off and making PREAMBLE tolerance nominal.
-    if (decoder.errors > 500) {
+    if (decoder.errors > 5 ) {
         decoder.errors = 0;
-        lf_decoder_reset_and_backoff(LF_FALSE_WAKEUP_TIMEOUT * 10);
+        lf_decoder_reset_and_backoff(LF_CRC_OK_TIMEOUT * 1);
+        return;
     }
 
     switch(decoder.state) {
@@ -274,14 +277,21 @@ void lf_decoder_capture_isr(void)
             break;
 
         case PREAMBLE:
+            //! Consider this the start of the PREAMBLE we dont care what happened before.
+            //! Configure edge to falling
+            lf_decoder_rtcc_cc0_config(LF_RTCC_CAPTURE, 0, rtccInEdgeFalling);
+            decoder.state = PREAMBLE_END;
+            break;
+
+        case PREAMBLE_END:
             if ((pulse_width > LF_PREAMBLE_L) && (pulse_width < LF_PREAMBLE_H)) {
+                lf_decoder_rtcc_cc0_config(LF_RTCC_CAPTURE, 0, rtccInEdgeBoth);
                 decoder.state = START_BIT_GAP;
                 decoder.buffer = 0;
                 decoder.bit_counter = LF_NUMBER_OF_BITS;
                 decoder.crc = 0;
             } else {
-                decoder.state = PREAMBLE;
-                //! Increment error counter (testing counter approach)
+                lf_decoder_reset_and_backoff((LF_FALSE_WAKEUP_TIMEOUT * 10));
                 decoder.errors++;
             }
             break;
@@ -290,14 +300,11 @@ void lf_decoder_capture_isr(void)
             if ((pulse_width > LF_START_BIT_GAP_MIN) && (pulse_width < LF_START_BIT_GAP_MAX)) {
                 decoder.state = START_BIT;
             } else {
-                decoder.state = PREAMBLE;
-                //! Increment error counter (testing counter approach)
                 decoder.errors++;
             }
             break;
 
         case START_BIT:
-            //TODO Check transmitter asymmetry effect during this pulse, PREAMBLE + START_GAP are the critical signals.
             //! ignore start bit pulse
             decoder.state = DATA;
             break;
@@ -310,10 +317,8 @@ void lf_decoder_capture_isr(void)
             } else if ((pulse_width > LF_ME_BIT1_L) && (pulse_width < LF_ME_BIT1_H)) {
                 decoder.buffer  = ((decoder.buffer  << 1) | 1);
             } else {
-                //decoder.prev_edge = stored_prev_edge;
-                //! Increment error counter (testing counter approach)
+
                 decoder.errors++;
-                decoder.state = PREAMBLE;
                 break;
             }
 
@@ -332,24 +337,26 @@ void lf_decoder_capture_isr(void)
                 if (((decoder.crc >> 1) ^ rx_crc) == 0) {
                     //! CRC OK!
                     lf_decoder_set_lf_data();
-                    lf_decoder_reset_and_backoff(LF_CRC_OK_TIMEOUT);
+                    lf_decoder_reset_and_backoff(LF_CRC_OK_TIMEOUT * 1.5);
+                    lf_debug_toggle(5);
                     decoder.errors = 0;
+                } else {
+                    lf_decoder_reset_and_backoff(LF_FALSE_WAKEUP_TIMEOUT * 10);
                 }
-                decoder.state = PREAMBLE;
             }
             break;
 
         default:
-            decoder.state = PREAMBLE;
+            lf_decoder_reset_and_backoff(LF_FALSE_WAKEUP_TIMEOUT * 10);
             break;
     }
 }
+RAMFUNC_DEFINITION_END
 
 void lf_decoder_prs_init(void)
 {
     CMU_ClockEnable(cmuClock_PRS, true);
     PRS_ConnectSignal(PRS_LF_CH, prsTypeAsync, prsSignalGPIO_PIN0);
-    GPIO_IntConfig(LF_DATA_PORT, LF_DATA_PIN, false, false, false);
     PRS_ConnectConsumer(PRS_LF_CH, prsTypeAsync, prsConsumerRTCC_CC0);
 }
 
@@ -381,7 +388,8 @@ void lf_decoder_init(void)
         DEBUG_TRAP();
     } else {
         //! Used for debug
-        //GPIO_PinModeSet(BOOTSEL_B2_PORT, BOOTSEL_B2_PIN, gpioModePushPull, 0);
+        GPIO_PinModeSet(BOOTSEL_B2_PORT, BOOTSEL_B2_PIN, gpioModePushPull, 0);
+        GPIO_PinModeSet(BOOTSEL_B1_PORT, BOOTSEL_B1_PIN, gpioModePushPull, 0);
 
         //! We are connecting the LF DATA pin to the RTCC Capture using PRS
         lf_decoder_prs_init();
@@ -391,9 +399,6 @@ void lf_decoder_init(void)
         RTCC_IntClear(RTCC_IEN_CC0);
         RTCC_IntEnable(RTCC_IEN_CC0);
 
-#if (TAG_TYPE == TAG_UT3)
-        as39_antenna_enable(true, false, false);
-#endif
         DEBUG_LOG(DBG_CAT_SYSTEM, "LF Decoder started...");
     }
 
