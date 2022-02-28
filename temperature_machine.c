@@ -13,6 +13,7 @@
 #include "stdio.h"
 #include "stdbool.h"
 #include "dbg_utils.h"
+#include "tag_sw_timer.h"
 #include "temperature_machine.h"
 #include "tag_beacon_machine.h"
 
@@ -25,23 +26,11 @@
 // Globals
 //******************************************************************************
 static volatile int8_t ttm_tag_current_temperature = 0;
-static volatile uint32_t ttm_timer = 0;
+static tag_sw_timer_t ttm_report_timer;
 
 //******************************************************************************
 // Static Functions
 //******************************************************************************
-static void ttm_reload_timer(uint32_t value)
-{
-    ttm_timer = value;
-}
-
-static void ttm_tick(void)
-{
-    if (ttm_timer > 0) {
-        --ttm_timer;
-    }
-}
-
 static void ttm_read_temperature(void)
 {
     volatile float temp_celsius = EMU_TemperatureGet();
@@ -76,23 +65,26 @@ int8_t ttm_get_current_temperature(void)
 //! @details Reads and sends Tag Temperature Beacon events
 void temperature_run(void)
 {
-    //! Tick Temperature Timer
-    ttm_tick();
+    //! Tick Temperature Report Timer
+    tag_sw_timer_tick(&ttm_report_timer);
 
     //! Measure SoC temperature every TTM_TIMER_PERIOD_SEC seconds and
-    //! Send its event to Tag Beacon Machine
-    if (ttm_timer == 0) {
-        ttm_reload_timer(TTM_TIMER_PERIOD_SEC);
+    //! Send Tag Temperature Beacon event to Tag Beacon Machine.
+    if (tag_sw_timer_is_expired(&ttm_report_timer)) {
+        //! Reload TTM Report Timer
+        tag_sw_timer_reload(&ttm_report_timer, TTM_TIMER_PERIOD_SEC);
+
+        //! Read current temperature.
         ttm_read_temperature();
 
-        // Send Temperature Beacon Event to Tag Beacon Machine
+        //! Send Temperature Beacon event to Tag Beacon Machine
         //tbm_set_event(TBM_TEMPERATURE_EVT);
     }
 }
 
 uint32_t ttm_init(void)
 {
-    ttm_reload_timer(0);
+    tag_sw_timer_reload(&ttm_report_timer, 0);
     ttm_read_temperature();
     return 0;
 }

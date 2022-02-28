@@ -26,6 +26,7 @@
 #include "stdbool.h"
 
 #include "dbg_utils.h"
+#include "tag_sw_timer.h"
 #include "wdog.h"
 #include "lf_machine.h"
 #include "tag_beacon_machine.h"
@@ -51,7 +52,7 @@
 // Global shared variables
 //******************************************************************************
 static volatile tmm_modes_t tmm_current_mode = TMM_PAUSED;
-static volatile tag_sw_timer_t tmm_slow_timer;
+static tag_sw_timer_t tmm_slow_timer;
 
 //******************************************************************************
 // Static functions
@@ -63,7 +64,7 @@ static void tmm_rtcc_update(void)
     RTCC_ChannelCompareValueSet(TMM_RTCC_CC1, timer_offset);
 }
 
-static char* tmm_mode_to_string(void)
+static char* tmm_current_mode_to_string(void)
 {
     switch(tmm_current_mode) {
         case TMM_NORMAL_MODE:
@@ -81,14 +82,7 @@ static char* tmm_mode_to_string(void)
     }
 }
 
-static void tmm_print_info(void)
-{
-    DEBUG_TTM("Tag Main Machine started...");
-    DEBUG_TTM("TMM current mode: %s", tmm_mode_to_string());
-    DEBUG_TTM("TMM tick period: %lu mS", tmm_get_tick_period_ms());
-    DEBUG_TTM("TMM slow tick period: %lu mS", tmm_get_slow_tick_period());
-}
-
+#if 0
 /*!
  *  @brief Reload Tag Main Slow Timer value
  */
@@ -106,6 +100,7 @@ static void tmm_slow_timer_tick(void)
         --tmm_slow_timer.value;
     }
 }
+#endif
 
 /*!
  *  @brief Tag Main Slow Timer Machine
@@ -113,10 +108,11 @@ static void tmm_slow_timer_tick(void)
  */
 static void tmm_slow_tasks_run(void)
 {
-    tmm_slow_timer_tick();
+    //tmm_slow_timer_tick();
+    tag_sw_timer_tick(&tmm_slow_timer);
 
-    if (tmm_slow_timer.value == 0) {
-        tmm_slow_timer_reload();
+    if (tag_sw_timer_is_expired(&tmm_slow_timer)) {
+        tag_sw_timer_reload(&tmm_slow_timer, TMM_DEFAULT_SLOW_TIMER_TICK_PERIOD);
 
         //! Add machines here
         temperature_run();

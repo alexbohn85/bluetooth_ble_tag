@@ -69,8 +69,8 @@
 #endif
 
 #if defined(LF_TOL_RELAXED)
-//#define LF_PREAMBLE_L                (49)           //!  ~1.500 mS
-#define LF_PREAMBLE_L                (165)           //!  ~1.500 mS
+#define LF_PREAMBLE_L                (49)           //!  ~1.500 mS
+//#define LF_PREAMBLE_L                (165)           //!  ~1.500 mS
 #define LF_PREAMBLE_H                (200)          //!  ~6.100 mS
 #define LF_START_BIT_GAP_MIN         (41)           //!  ~1.250 mS
 #define LF_START_BIT_GAP_MAX         (45)           //!  ~1.350 mS
@@ -213,8 +213,8 @@ void lf_decoder_reset_and_backoff(uint32_t timeout)
     CORE_DECLARE_IRQ_STATE;
     CORE_ENTER_CRITICAL();
     as39_antenna_enable(false, false, false);
-    CORE_EXIT_CRITICAL();
     lf_decoder_compare_start(timeout);
+    CORE_EXIT_CRITICAL();
 }
 
 RAMFUNC_DECLARATOR

@@ -109,9 +109,6 @@ void tag_init(void)
     //! Tell Power Manager if we want to stay awake in main context or go to sleep immediately after an ISR.
     tag_sleep_on_isr_exit(true);
 
-    //EMU->CTRL_SET = EMU_CTRL_FLASHPWRUPONDEMAND;
-    CMU_ClockDivSet(cmuClock_HCLK, 1);
-
     //! Initialize AS3933 device driver
     as39_init(sl_spidrv_as39_spi_handle, NULL);
 
@@ -146,7 +143,7 @@ void tag_init(void)
             DEBUG_LOG(DBG_CAT_SYSTEM, "Boot Select (boot_mode = 0x%.2X) -> Normal mode", boot_read_mode());
             tmm_start_normal_mode();
 #if defined(TAG_DEBUG_MODE_PRESENT)
-            //cli_start();
+            cli_start();
 #endif
             break;
 

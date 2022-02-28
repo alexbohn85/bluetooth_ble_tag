@@ -30,11 +30,13 @@
 #include "sl_slist.h"
 #include "app_assert.h"
 #include "sl_status.h"
-#include "ble_api.h"
+
 #include "dbg_utils.h"
-#include "ble_manager_machine.h"
+#include "tag_sw_timer.h"
+#include "ble_api.h"
 #include "tag_main_machine.h"
 #include "temperature_machine.h"
+#include "ble_manager_machine.h"
 
 
 //******************************************************************************
@@ -94,7 +96,7 @@
 // Global variables
 //******************************************************************************
 static sl_sleeptimer_timer_handle_t bmm_timer_1;
-static volatile tag_sw_timer_t bmm_debug_timer;
+static tag_sw_timer_t bmm_debug_timer;
 static volatile bmm_fsm_t bmm_fsm;
 volatile bool bmm_adv_running;
 volatile bool bmm_stack_running;
@@ -135,7 +137,7 @@ static void ble_tx_dummy_msg(uint8_t num_events, uint32_t interval_ms)
     bmm_adv_running = true;
 }
 
-
+#if 0
 static void bmm_timer_reload(uint32_t value)
 {
     bmm_debug_timer.value = value;
@@ -147,6 +149,7 @@ static void bmm_timer_tick(void)
         --bmm_debug_timer.value;
     }
 }
+#endif
 
 
 //******************************************************************************
@@ -309,9 +312,9 @@ void ble_manager_run(void)
 {
     //! We dont have Tag Beacon Machine fully implemented yet so just simulate
     //! a periodic BLE event here to run power consumption eval.
-    bmm_timer_tick();
+    tag_sw_timer_tick(&bmm_debug_timer);
 
-    if (bmm_debug_timer.value == 0) {
+    if (tag_sw_timer_is_expired(&bmm_debug_timer)) {
 
         //! Schedule an API call (we need HFXO restored so use option_flags = 0)
         //! This is a temporary workaround to force HFXO restore on the wake-up.
@@ -323,7 +326,7 @@ void ble_manager_run(void)
                                       0); //-> 0 means it will restore HFXO
 
         //! Reload timer (12 seconds)
-        bmm_timer_reload(BEACON_FAST_RATE_RELOAD);
+        tag_sw_timer_reload(&bmm_debug_timer, BEACON_FAST_RATE_RELOAD);
 
 #if 0
         //! just concept ideas here
@@ -355,7 +358,7 @@ void ble_manager_run(void)
 //! @brief BLE Manager Init
 uint32_t bmm_init(void)
 {
-    bmm_timer_reload(12000/TMM_DEFAULT_TICK_PERIOD_MS);
+    tag_sw_timer_reload(&bmm_debug_timer, BEACON_FAST_RATE_RELOAD);
     bmm_stack_running = false;
     bmm_adv_running = false;
     bmm_fsm.state = BMM_START;
