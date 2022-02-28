@@ -11,6 +11,7 @@
 #ifndef LF_MACHINE_H_
 #define LF_MACHINE_H_
 
+#include "lf_decoder.h"
 
 //******************************************************************************
 // Defines
@@ -23,6 +24,17 @@
 //******************************************************************************
 // Data types
 //******************************************************************************
+typedef enum lfm_lf_events_t {
+    ENTERING_FIELD,
+    EXITING_FIELD,
+    STAYING_FIELD,
+    WTA_DELAYED_CMD_EXEC
+}lfm_lf_events_t;
+
+typedef struct lfm_lf_beacon_t {
+    lfm_lf_events_t lf_event;
+    lf_decoder_data_t lf_data;
+} lfm_lf_beacon_t;
 
 //******************************************************************************
 // Interface

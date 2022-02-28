@@ -37,21 +37,9 @@ typedef enum tmm_states_t {
 } tmm_modes_t;
 
 
-//TODO tag_sw_timer_t WIP it might be worth to elaborate these timers a bit more OR NOT!
-typedef struct tag_sw_timer_t {
-    uint32_t value;
-    //uint32_t reload_value;
-    //uint32_t type; //periodic, timeout.
-    //bool expired; // for timeouts
-    //bool running; // for periodic
-} tag_sw_timer_t;
-
-
 //******************************************************************************
 // Interface
 //******************************************************************************
-
-//TODO debug TMM on RTCC
 void tag_main_run(void);
 void tmm_init(tmm_modes_t mode);
 
@@ -85,10 +73,6 @@ void tmm_start_manufacturing_mode(void);
  */
 void tmm_start_normal_mode(void);
 
-/*!
- * @brief Start Tag Main Machine in Normal Mode State
- * @return <uint32_t> ticks in millisecond
- */
 uint32_t tmm_get_tick_period_ms(void);
 uint32_t tmm_get_slow_tick_period(void);
 
