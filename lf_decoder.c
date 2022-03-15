@@ -31,16 +31,10 @@
 #include "rtcc.h"
 #include "app_properties.h"
 
-//TODO Delete this (only for a test)
-#include "boot.h"
-
 
 //******************************************************************************
 // Defines
 //******************************************************************************
-#define LF_DECODER_DEBUG
-
-
 #define LF_DATA_PIN                  AS39_LF_DATA_PIN
 #define LF_DATA_PORT                 AS39_LF_DATA_PORT
 
@@ -100,6 +94,7 @@ typedef enum lf_decoder_states_t {
 } lf_decoder_states_t;
 
 typedef struct lf_decoder_t {
+    bool is_enabled;
     lf_decoder_states_t state;
     uint32_t curr_edge;
     uint32_t prev_edge;
@@ -119,60 +114,7 @@ static lf_decoder_t decoder;
 //******************************************************************************
 // Static functions
 //******************************************************************************
-
-//******************************************************************************
-// Non-Static functions
-//******************************************************************************
-
-//!-----------------------------------------------------------------------------
-//!-----------------------------------------------------------------------------
-//!-----------------------------------------------------------------------------
-bool lf_decoder_is_data_available(void)
-{
-    return lf_data.is_available;
-}
-
-void lf_decoder_get_lf_data(lf_decoder_data_t *dest)
-{
-    CORE_DECLARE_IRQ_STATE;
-    CORE_ENTER_CRITICAL();
-
-    dest->is_available = lf_data.is_available;
-    dest->command = lf_data.command;
-    dest->id = lf_data.id;
-
-    CORE_EXIT_CRITICAL();
-}
-
-void lf_decoder_set_lf_data(void)
-{
-    CORE_DECLARE_IRQ_STATE;
-    CORE_ENTER_CRITICAL();
-
-    lf_data.is_available = true;
-    lf_data.id = (uint16_t)((decoder.buffer >> 13) & 0x7FF);
-    lf_data.command = (uint8_t)((decoder.buffer >> 7) & 0x3F);
-
-    CORE_EXIT_CRITICAL();
-}
-
-void lf_decoder_clear_lf_data(void)
-{
-    CORE_DECLARE_IRQ_STATE;
-    CORE_ENTER_CRITICAL();
-
-    lf_data.is_available = false;
-    lf_data.id = 0;
-    lf_data.command = 0;
-
-    CORE_EXIT_CRITICAL();
-}
-
-//!-----------------------------------------------------------------------------
-//!-----------------------------------------------------------------------------
-//!-----------------------------------------------------------------------------
-
-void lf_decoder_rtcc_cc0_config(lf_decoder_rtcc_modes_t mode, uint32_t timeout, RTCC_InEdgeSel_TypeDef edge)
+static void lf_decoder_rtcc_cc0_config(lf_decoder_rtcc_modes_t mode, uint32_t timeout, RTCC_InEdgeSel_TypeDef edge)
 {
     if (mode == LF_RTCC_CAPTURE) {
         RTCC_CCChConf_TypeDef cc0_cfg = RTCC_CH_INIT_CAPTURE_DEFAULT;
@@ -192,33 +134,33 @@ void lf_decoder_rtcc_cc0_config(lf_decoder_rtcc_modes_t mode, uint32_t timeout, 
     RTCC_IntClear(RTCC_IF_CC0);
 }
 
-void lf_decoder_compare_start(uint32_t timeout)
+static void lf_decoder_compare_start(uint32_t timeout)
 {
     lf_decoder_rtcc_cc0_config(LF_RTCC_COMPARE, timeout, rtccInEdgeNone);
 }
 
-void lf_decoder_capture_start(void)
+static void lf_decoder_prs_init(void)
 {
-    CORE_DECLARE_IRQ_STATE;
-    CORE_ENTER_CRITICAL();
+    CMU_ClockEnable(cmuClock_PRS, true);
+    PRS_ConnectSignal(PRS_LF_CH, prsTypeAsync, prsSignalGPIO_PIN0);
+    PRS_ConnectConsumer(PRS_LF_CH, prsTypeAsync, prsConsumerRTCC_CC0);
+}
+
+static void lf_decoder_capture_start(void)
+{
     decoder.state = PREAMBLE;
     lf_decoder_rtcc_cc0_config(LF_RTCC_CAPTURE, 0, rtccInEdgeRising);
     as39_antenna_enable(true, false, false);
-    CORE_EXIT_CRITICAL();
-
 }
 
-void lf_decoder_reset_and_backoff(uint32_t timeout)
+static void lf_decoder_reset_and_backoff(uint32_t timeout)
 {
-    CORE_DECLARE_IRQ_STATE;
-    CORE_ENTER_CRITICAL();
     as39_antenna_enable(false, false, false);
     lf_decoder_compare_start(timeout);
-    CORE_EXIT_CRITICAL();
 }
 
-RAMFUNC_DECLARATOR
-void lf_decoder_crc(uint8_t bit)
+//RAMFUNC_DECLARATOR
+static void lf_decoder_crc(uint8_t bit)
 {
     if ((decoder.crc ^ (bit << 1)) & 0x02) {
         decoder.crc = (((decoder.crc ^ 0x20) >> 1) | 0x80);
@@ -226,43 +168,74 @@ void lf_decoder_crc(uint8_t bit)
         decoder.crc = decoder.crc >> 1;
     }
 }
-RAMFUNC_DEFINITION_END
+//RAMFUNC_DEFINITION_END
 
-RAMFUNC_DECLARATOR
+//******************************************************************************
+// Non-Static functions
+//******************************************************************************
+
+bool lf_decoder_is_data_available(void)
+{
+    return lf_data.is_available;
+}
+
+void lf_decoder_get_lf_data(lf_decoder_data_t *dest)
+{
+    CORE_DECLARE_IRQ_STATE;
+    CORE_ENTER_ATOMIC();
+
+    dest->is_available = lf_data.is_available;
+    dest->command = lf_data.command;
+    dest->id = lf_data.id;
+
+    CORE_EXIT_ATOMIC();
+}
+
+void lf_decoder_set_lf_data(void)
+{
+    CORE_DECLARE_IRQ_STATE;
+    CORE_ENTER_ATOMIC();
+
+    lf_data.is_available = true;
+    lf_data.id = (uint16_t)((decoder.buffer >> 13) & 0x7FF);
+    lf_data.command = (uint8_t)((decoder.buffer >> 7) & 0x3F);
+
+    CORE_EXIT_ATOMIC();
+}
+
+void lf_decoder_clear_lf_data(void)
+{
+    CORE_DECLARE_IRQ_STATE;
+    CORE_ENTER_ATOMIC();
+
+    lf_data.is_available = false;
+    lf_data.id = 0;
+    lf_data.command = 0;
+
+    CORE_EXIT_ATOMIC();
+}
+
+//RAMFUNC_DECLARATOR
 void lf_decoder_compare_isr(void)
 {
     lf_decoder_capture_start();
 }
-RAMFUNC_DEFINITION_END
+//RAMFUNC_DEFINITION_END
 
-void lf_debug_toggle(uint8_t mult)
-{
-    uint16_t i;
-    GPIO_PinOutSet(BOOTSEL_B1_PORT, BOOTSEL_B1_PIN);
-    for (i = 5*mult; i > 0; i--);
-    GPIO_PinOutClear(BOOTSEL_B1_PORT, BOOTSEL_B1_PIN);
-}
-
-RAMFUNC_DECLARATOR
+//RAMFUNC_DECLARATOR
 void lf_decoder_capture_isr(void)
 {
-
     decoder.curr_edge = RTCC_ChannelCaptureValueGet(LF_RTCC_CC0);
 
     volatile int pulse_width = (decoder.curr_edge - decoder.prev_edge);
 
-    //TODO Implement glitch filter approach to improve decoding in low SNR.
-    //volatile uint32_t stored_prev_edge = decoder.prev_edge;
-
     decoder.prev_edge = decoder.curr_edge;
 
-    //! Handle negative values
+    // Handle negative values
     if (pulse_width < 0) {
         pulse_width = (~pulse_width + 1);
     }
 
-    //! TODO Testing using error counter in the PREAMBLE and start bit to try to distinguish noise from weak field.
-    //! TODO Compare performance not using on/off and making PREAMBLE tolerance nominal.
     if (decoder.errors > 5 ) {
         decoder.errors = 0;
         lf_decoder_reset_and_backoff(LF_CRC_OK_TIMEOUT * 1);
@@ -271,14 +244,14 @@ void lf_decoder_capture_isr(void)
 
     switch(decoder.state) {
 
-        //! bit "0" was detected on previous pulse, ignore this transition and go back to DATA state.
+        // bit "0" was detected on previous pulse, ignore this transition and go back to DATA state.
         case SKIP_NEXT_PULSE:
             decoder.state = DATA;
             break;
 
         case PREAMBLE:
-            //! Consider this the start of the PREAMBLE we dont care what happened before.
-            //! Configure edge to falling
+            // Consider this the start of the PREAMBLE we dont care what happened before.
+            // Configure edge to falling
             lf_decoder_rtcc_cc0_config(LF_RTCC_CAPTURE, 0, rtccInEdgeFalling);
             decoder.state = PREAMBLE_END;
             break;
@@ -305,40 +278,38 @@ void lf_decoder_capture_isr(void)
             break;
 
         case START_BIT:
-            //! ignore start bit pulse
+            // Ignore start bit pulse
             decoder.state = DATA;
             break;
 
-            //! Decode LF DATA Stream
+            // Decode LF DATA Stream
         case DATA:
             if ((pulse_width > LF_ME_BIT0_L) && (pulse_width < LF_ME_BIT0_H)) {
-                decoder.buffer = decoder.buffer  << 1;
+                decoder.buffer = (decoder.buffer << 1);
                 decoder.state = SKIP_NEXT_PULSE;
             } else if ((pulse_width > LF_ME_BIT1_L) && (pulse_width < LF_ME_BIT1_H)) {
                 decoder.buffer  = ((decoder.buffer  << 1) | 1);
             } else {
-
                 decoder.errors++;
                 break;
             }
 
             decoder.bit_counter--;
 
-            //! On the fly CRC
+            // On the fly CRC
             if (decoder.bit_counter > 6) {
                 //! Send current bit received to CRC on the fly calculation
                 lf_decoder_crc(decoder.buffer & 0x01);
                 break;
             }
 
-            //! All bits received, check CRC.
+            // All bits received, check CRC.
             if (decoder.bit_counter == 0) {
                 uint8_t rx_crc = (decoder.buffer & 0x7F);
                 if (((decoder.crc >> 1) ^ rx_crc) == 0) {
                     //! CRC OK!
                     lf_decoder_set_lf_data();
                     lf_decoder_reset_and_backoff(LF_CRC_OK_TIMEOUT * 1.5);
-                    lf_debug_toggle(5);
                     decoder.errors = 0;
                 } else {
                     lf_decoder_reset_and_backoff(LF_FALSE_WAKEUP_TIMEOUT * 10);
@@ -351,30 +322,29 @@ void lf_decoder_capture_isr(void)
             break;
     }
 }
-RAMFUNC_DEFINITION_END
+//RAMFUNC_DEFINITION_END
 
-void lf_decoder_prs_init(void)
+bool lf_decoder_is_enabled(void)
 {
-    CMU_ClockEnable(cmuClock_PRS, true);
-    PRS_ConnectSignal(PRS_LF_CH, prsTypeAsync, prsSignalGPIO_PIN0);
-    PRS_ConnectConsumer(PRS_LF_CH, prsTypeAsync, prsConsumerRTCC_CC0);
+    return decoder.is_enabled;
 }
 
-#if 0  // moved to rtcc.c
-void lf_decoder_rtcc_init(void)
+void lf_decoder_enable(bool enable)
 {
-    //! RTCC Clock Enable (Assuming LFXO was initialized during sl_system_init)
-    CMU_ClockSelectSet(cmuClock_RTCCCLK, cmuSelect_LFXO);
-    CMU_ClockEnable(cmuClock_RTCC, true);
+    decoder.is_enabled = enable;
 
-    //! RTCC Configuration
-    RTCC_Init_TypeDef rtcc_cfg = RTCC_INIT_DEFAULT;
-    rtcc_cfg.debugRun = false;
-    rtcc_cfg.presc = rtccCntPresc_1;
-    rtcc_cfg.prescMode = rtccCntTickPresc;
-    RTCC_Init(&rtcc_cfg);
+    lf_decoder_clear_lf_data();
+
+    RTCC_IntClear(RTCC_IEN_CC0);
+
+    if (enable) {
+        RTCC_IntEnable(RTCC_IEN_CC0);
+        lf_decoder_capture_start();
+    } else {
+        RTCC_IntDisable(RTCC_IEN_CC0);
+        as39_antenna_enable(false, false, false);
+    }
 }
-#endif
 
 void lf_decoder_init(void)
 {
@@ -383,13 +353,10 @@ void lf_decoder_init(void)
     decoder.state = PREAMBLE;
 
     //! Check if AS393x device driver is initialized
-    if(as39_get_handle(NULL) == AS39_DRIVER_NOT_INITIATED) {
+    if(as39_get_settings_handler(NULL) == AS39_DRIVER_NOT_INITIATED) {
         DEBUG_LOG(DBG_CAT_WARNING, "ERROR! AS393x device driver was not initiated...");
         DEBUG_TRAP();
     } else {
-        //! Used for debug
-        GPIO_PinModeSet(BOOTSEL_B2_PORT, BOOTSEL_B2_PIN, gpioModePushPull, 0);
-        GPIO_PinModeSet(BOOTSEL_B1_PORT, BOOTSEL_B1_PIN, gpioModePushPull, 0);
 
         //! We are connecting the LF DATA pin to the RTCC Capture using PRS
         lf_decoder_prs_init();
@@ -399,9 +366,11 @@ void lf_decoder_init(void)
         RTCC_IntClear(RTCC_IEN_CC0);
         RTCC_IntEnable(RTCC_IEN_CC0);
 
+        //! Enable LF Decoder
+        //lf_decoder_enable(true);
+
         DEBUG_LOG(DBG_CAT_SYSTEM, "LF Decoder started...");
     }
-
 }
 
 

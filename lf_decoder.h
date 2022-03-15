@@ -53,8 +53,8 @@ void lf_decoder_get_lf_data(lf_decoder_data_t *dest);
 bool lf_decoder_is_data_available(void);
 void lf_decoder_compare_isr(void);
 void lf_decoder_capture_isr(void);
-void lf_decoder_capture_stop(void);
-void lf_decoder_capture_start(void);
+bool lf_decoder_is_enabled(void);
+void lf_decoder_enable(bool enable);
 void lf_decoder_init(void);
 
 #endif /* LF_DECODER_H_ */

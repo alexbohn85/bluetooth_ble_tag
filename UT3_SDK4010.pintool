@@ -1,20 +1,14 @@
 <?xml version="1.0" encoding="ASCII"?>
-<device:XMLDevice xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:device="http://www.silabs.com/ss/hwconfig/document/device.ecore" name="pin_tool.EFR32BG22C222F352GM32" partId="mcu.arm.efr32.bg22.efr32bg22c222f352gm32" contextId="com.silabs.sdk.stack.super:4.0.1._1988291492">
+<device:XMLDevice xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:device="http://www.silabs.com/ss/hwconfig/document/device.ecore" name="pin_tool.EFR32BG22C222F352GM32" partId="mcu.arm.efr32.bg22.efr32bg22c222f352gm32" contextId="com.silabs.sdk.stack.super:4.0.1._-923882538">
   <mode name="DefaultMode">
     <property object="DefaultMode" propertyId="mode.diagramLocation" value="100, 100"/>
     <property object="GPIO" propertyId="ABModule.selectedRequirement" value="gpio%T%SL_DEBUG%T%sl_debug_swo_config.h"/>
     <property object="GPIO" propertyId="ABPeripheral.included" value="true"/>
     <property object="PORTIO" propertyId="portio.gpio.enable.swv" value="Enabled"/>
-    <property object="PORTIO" propertyId="portio.usart0.enable.clk" value="Enabled"/>
-    <property object="PORTIO" propertyId="portio.usart0.enable.cs" value="Enabled"/>
-    <property object="PORTIO" propertyId="portio.usart0.enable.rx" value="Enabled"/>
-    <property object="PORTIO" propertyId="portio.usart0.enable.tx" value="Enabled"/>
     <property object="PORTIO" propertyId="portio.usart0.location.clk" value="35"/>
     <property object="PORTIO" propertyId="portio.usart0.location.cs" value="36"/>
     <property object="PORTIO" propertyId="portio.usart0.location.rx" value="33"/>
     <property object="PORTIO" propertyId="portio.usart0.location.tx" value="34"/>
-    <property object="PORTIO" propertyId="portio.usart1.enable.rx" value="Enabled"/>
-    <property object="PORTIO" propertyId="portio.usart1.enable.tx" value="Enabled"/>
     <property object="PORTIO" propertyId="portio.usart1.location.rx" value="4"/>
     <property object="PORTIO" propertyId="portio.usart1.location.tx" value="5"/>
     <property object="USART0" propertyId="ABModule.selectedRequirement" value="usart%T%SL_SPIDRV_AS39_SPI%T%sl_spidrv_as39_spi_config.h"/>

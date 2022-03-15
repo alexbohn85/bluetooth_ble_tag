@@ -2,6 +2,12 @@ GNU ARM v10.2.1 - Default
 gecko_sdk_3.2.3
 gecko_sdk_4.0.1
 
+html/
+commander/
+*.doxygen
+*.dll
+*.zip
+
 .pdm
 .trash
 .uceditor

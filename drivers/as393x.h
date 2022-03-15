@@ -8,8 +8,12 @@
 #ifndef AS393X_H_
 #define AS393X_H_
 
+#include <tag_gpio_mapping.h>
 #include "spidrv.h"
 
+//******************************************************************************
+// Defines
+//******************************************************************************
 /*!
  *  @brief Select compilation AS3933 or AS3930 driver. \n\n
  *  Define here:
@@ -24,43 +28,21 @@
 #define AS39_DRIVER_NOT_INITIATED    (2)
 #define AS39_WRONG_SPI_PARAM         (3)
 
-// AS393x data / wake-up gpio configuration
-
-#define AS39_LF_DATA_PORT            (gpioPortA)
-#define AS39_LF_DATA_PIN             (0)
+#define AS39_LF_DATA_PORT            TAG_GPIO_AS39_LF_DATA_PORT
+#define AS39_LF_DATA_PIN             TAG_GPIO_AS39_DATA_PIN
 #if defined(AS39_WAKE_UP_PRESENT)
-#define AS39_WAKE_UP_PORT
-#define AS39_WAKE_UP_PIN
+#define AS39_WAKE_UP_PORT            TAG_GPIO_AS39_LF_WAKEUP_PORT
+#define AS39_WAKE_UP_PIN             TAG_GPIO_AS39_LF_WAKEUP_PIN
 #endif
 
 #define AS39_REG_ARRAY_SIZE          (13)
-
-
-/*!
- *  @brief AS393x registers addresses
- */
-typedef enum as39_address_t {
-    REG_0 = 0,  //!< 0x00
-    REG_1,      //!< 0x01
-    REG_2,      //!< 0x02
-    REG_3,      //!< 0x03
-    REG_4,      //!< 0x04
-    REG_5,      //!< 0x05
-    REG_6,      //!< 0x06
-    REG_7,      //!< 0x07
-    REG_8,      //!< 0x09
-    REG_9,      //!< 0x0A
-    REG_10,     //!< 0x0B
-    REG_11,     //!< 0x0C
-    REG_12      //!< 0x0D
-} as39_address_t;
 
 #if defined(AS39_DEVICE_AS3933)
 #define AS39_DEVICE_NAME             ("AS3933")
 #define AS39_DEVICE_ID               (AS3933_ID)
 #define AS39_DEFAULT_SETTINGS                                          \
   {                                                                    \
-    {0, {0x20}},                                                       \
+    {0, {0x00}},                                                       \
     {1, {0x20}},                                                       \
     {2, {0x02}},                                                       \
     {3, {0x39}},                                                       \
@@ -96,6 +78,28 @@ typedef enum as39_address_t {
   }
 
 #endif
+
+//******************************************************************************
+// Data types
+//******************************************************************************
+/*!
+ *  @brief AS393x registers addresses
+ */
+typedef enum as39_address_t {
+    REG_0 = 0,  //!< 0x00
+    REG_1,      //!< 0x01
+    REG_2,      //!< 0x02
+    REG_3,      //!< 0x03
+    REG_4,      //!< 0x04
+    REG_5,      //!< 0x05
+    REG_6,      //!< 0x06
+    REG_7,      //!< 0x07
+    REG_8,      //!< 0x09
+    REG_9,      //!< 0x0A
+    REG_10,     //!< 0x0B
+    REG_11,     //!< 0x0C
+    REG_12      //!< 0x0D
+} as39_address_t;
 
 struct as39_r0_t {
     const uint8_t addr;
@@ -337,91 +341,115 @@ struct as39_iterator_t {
     uint8_t value;
 };
 
-struct as39_handle_container_t {
+struct as39_settings_container_t {
     union {
         struct as39_data_t registers;
         struct as39_iterator_t iterator[13];
     };
 };
 
-//! Register Handle Datatype
-typedef struct as39_handle_container_t * as39_handle_t;
+typedef struct as39_settings_container_t * as39_settings_handle_t;
 
-uint32_t as39_init(SPIDRV_Handle_t as39_spi, as39_handle_t *as39_handle);
-uint32_t as39_get_handle(as39_handle_t *data);
-uint32_t as39_write_register(as39_address_t reg);
-uint32_t as39_read_register(as39_address_t reg);
+//******************************************************************************
+// Interface
+//******************************************************************************
+
+/*!
+ *  @brief Initialize AS393x device driver
+ *  @param SPIDRV_Handle_t <as39_spi>
+ *  @return @ref AS39_OK on success, otherwise on failure.
+ */
+uint32_t as39_init(SPIDRV_Handle_t as39_spi);
+
+/*!
+ *  @brief Return device driver instance (AS393x register mapping)
+ *  @return @ref AS39_OK on success, otherwise on failure.
+ */
+uint32_t as39_get_settings_handler(as39_settings_handle_t *settings);
+
+/*!
+ *  @brief Write all registers from device driver instance to AS393x.
+ *  @return @ref AS39_OK on success, otherwise on failure.
+ */
 uint32_t as39_write_all_registers(void);
-uint32_t as39_read_all_registers(as39_handle_t *data);
+
+/*!
+ *  @brief Read all registers from AS393x to device driver instance.
+ *  @param as39_settings_handle_t <settings>
+ *  @return @ref AS39_OK on success, otherwise on failure.
+ */
+uint32_t as39_read_all_registers(as39_settings_handle_t *settings);
+
+/*!
+ *  @brief Read a register from AS393x.
+ *  @return @ref AS39_OK on success, otherwise on failure.
+ */
+uint32_t as39_read_reg(as39_address_t reg, uint8_t *value);
+
+/*!
+ *  @brief Write a register to AS393x.
+ *  @return @ref AS39_OK on success, otherwise on failure.
+ */
+uint32_t as39_write_reg(as39_address_t reg, uint8_t value);
 
 #if defined(AS39_DEVICE_AS3933)
-
 /*!
  *  @brief This function enables/disables AS3933 antenna receivers.\n
  *  Set to \b true if antenna will be enabled, otherwise \b false.
- *
- *  @return AS39_OK on success, otherwise on failure
+ *  @return @ref AS39_OK on success, otherwise on failure.
  */
 uint32_t as39_antenna_enable(bool EN_1, bool EN_2, bool EN_3);
 
-/*!
- *  @todo Not implemented
- */
-uint32_t as39_cmd_calib_rco_lc(void);
-
 #else
-
 /*!
- *  @brief This function enables/disables AS3930 antenna receiver.\n
- *  \n Set to \b true if antenna will be enabled, otherwise \b false.
- *
- *  @return AS39_OK on success, otherwise on failure
+ *  @brief This function enables/disables AS3933 antenna receivers.\n
+ *  Set to \b true if antenna will be enabled, otherwise \b false.
+ *  @return @ref AS39_OK on success, otherwise on failure.
  */
 uint32_t as39_antenna_enable(bool EN_A);
 
 /*!
  *  @brief This function enables/disables <b>Power-Down Mode</b> AS3930 only
- *  @return AS39_OK on success, otherwise on failure.
+ *  @return @ref AS39_OK on success, otherwise on failure.
  */
 uint32_t as39_power_down(bool PWD);
 #endif
 
 /*!
  *  @brief Sends direct command <b>"Clear Wake Up"</b>
- *  @return AS39_OK on success, otherwise on failure.
+ *  @return @ref AS39_OK on success, otherwise on failure.
  */
 uint32_t as39_cmd_clear_wake(void);
 
 /*!
  *  @brief Sends direct command <b>"Reset RSSI"</b>
- *  @return AS39_OK on success, otherwise on failure.
+ *  @return @ref AS39_OK on success, otherwise on failure.
  */
 uint32_t as39_cmd_reset_rssi(void);
 
 /*!
  *  @brief Sends direct command <b>"Trim Osc"</b>
- *  @return AS39_OK on success, otherwise on failure.
+ *  @return @ref AS39_OK on success, otherwise on failure.
  */
 uint32_t as39_cmd_trim_osc(void);
 
 /*!
  *  @brief Sends direct command <b>"Clear False Wake-up"</b>
- *  @return AS39_OK on success, otherwise on failure.
+ *  @return @ref AS39_OK on success, otherwise on failure.
  */
 uint32_t as39_cmd_clear_false(void);
 
 /*!
  *  @brief Sends direct command <b>"Preset"</b> (reset all registers to factory default).
- *  @return AS39_OK on success, otherwise on failure.
+ *  @return @ref AS39_OK on success, otherwise on failure.
  */
 uint32_t as39_cmd_preset_default(void);
 
 /*!
- *  @brief Get device part-number
- *  @return uint8_t *device name
+ *  @brief Get device part-number as string
+ *  @return const char*
  */
 const char* as39_get_device_name(void);
-uint32_t as39_read_raw(as39_address_t reg, uint8_t *value);
 
 #endif /* AS393X_H_ */
 

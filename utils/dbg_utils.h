@@ -15,13 +15,6 @@
 // Defines
 //******************************************************************************
 
-#if defined(TAG_LOG_PRESENT)
-#define DBG_LOG
-#if defined(TAG_TRAP_PRESENT)
-#define DBG_TRAP
-#endif
-#endif
-
 #define SCREEN_CLEAR                 "[2J"         // Clear screen, reposition cursor to top left
 #define ERASE_LINE                   "\33[2K"
 #define TERMINAL_RESET               "[c"          // Reset terminal
@@ -87,7 +80,7 @@ extern volatile bool sleep_on_isr_exit;
 // Macros
 //******************************************************************************
 
-#if defined(DBG_LOG)
+#if defined(TAG_LOG_PRESENT)
 
 char* dbg_log_filter_to_string(dbg_log_filters_t filter);
 void print_timestamp(void);
@@ -107,12 +100,13 @@ void print_timestamp(void);
 #endif
 
 
-#if defined(DBG_TRAP)
+#if defined(TAG_TRAP_PRESENT)
 void dbg_trap(void);
 #define DEBUG_TRAP(format, args...)                                                                            \
    do {                                                                                                        \
        if (trap_enable) {                                                                                      \
-           printf(COLOR_RED "[DEBUG_TRAP] (%s:%u) " format "\n", __FILE__, __LINE__, ##args);                  \
+           print_timestamp();                                                                                  \
+           printf(COLOR_B_RED "[DEBUG_TRAP] (%s:%u) " format COLOR_RST, __FILE__, __LINE__, ##args);           \
            dbg_trap();                                                                                         \
        }                                                                                                       \
    } while(0)                                                                                                  \

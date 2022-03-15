@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="ASCII"?>
 <model:MDescriptors xmlns:model="http://www.silabs.com/ss/Studio.ecore">
   <descriptors name="UT3_SDK4010">
-    <properties key="projectCommon.sdkId" value="com.silabs.sdk.stack.super:4.0.1._1988291492"/>
-    <properties key="universalConfig.generationDirectory" value="F:\Simplicity\v5_workspace\UT3_SDK4010"/>
+    <properties key="projectCommon.sdkId" value="com.silabs.sdk.stack.super:4.0.1._-923882538"/>
+    <properties key="universalConfig.generationDirectory" value="F:\Simplicity\v5_workspace\UT-3"/>
     <properties key="universalConfig.toolchainCompatibility" value="iar gcc"/>
     <properties key="projectCommon.boardIds" value="com.silabs.board.none:0.0.0"/>
     <properties key="projectCommon.partId" value="mcu.arm.efr32.bg22.efr32bg22c222f352gm32"/>

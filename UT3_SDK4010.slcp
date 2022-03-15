@@ -18,6 +18,8 @@ include:
 sdk: {id: gecko_sdk, version: 4.0.1}
 toolchain_settings: []
 component:
+- {id: emlib_rmu}
+- {id: emlib_iadc}
 - {id: EFR32BG22C222F352GM32}
 - {id: iostream_retarget_stdio}
 - {id: bluetooth_feature_connection}
@@ -28,13 +30,13 @@ component:
 - {id: bluetooth_feature_sm}
 - {id: emlib_wdog}
 - {id: bluetooth_feature_system}
-- {id: gatt_configuration}
 - {id: device_init_lfxo}
+- {id: gatt_configuration}
+- {id: sl_memory}
 - {id: bluetooth_feature_scanner}
 - {id: bluetooth_stack}
 - {id: component_catalog}
 - {id: ota_dfu}
-- {id: bluetooth_on_demand_start}
 - instance: [as39_spi]
   id: spidrv
 - {id: iostream_stdlib_config}

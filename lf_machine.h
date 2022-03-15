@@ -16,6 +16,9 @@
 //******************************************************************************
 // Defines
 //******************************************************************************
+#define LFM_WTA_DELAYED_CMD_EXEC_FLAG          (0x01)                           //! This flag indicate we received a WTA command and we are confirming it.
+#define LFM_WTA_BACKOFF_FLAG                   (0x02)                           //! After receiving and confirming WTA command we want to avoid receiving another command right away.
+#define LFM_STAYING_IN_FIELD_FLAG              (0x04)
 
 //******************************************************************************
 // Extern global variables
@@ -39,6 +42,8 @@ typedef struct lfm_lf_beacon_t {
 //******************************************************************************
 // Interface
 //******************************************************************************
+lfm_lf_beacon_t* lfm_get_beacon_data(void);
+uint8_t lfm_get_lf_status(void);
 void lf_run(void);
 uint32_t lfm_init(void);
 

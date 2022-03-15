@@ -89,7 +89,7 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
 
     switch (SL_BT_MSG_ID(evt->header)) {
         default:
-            bmm_adv_running = false;
+            //bmm_adv_running = false;
             break;
 
         case sl_bt_evt_system_boot_id:
@@ -100,6 +100,15 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
             bmm_adv_running = false;
             //tag_sleep_on_isr_exit(true);
             DEBUG_LOG(DBG_CAT_BLE, "Stop BLE beacon advertising...");
+            break;
+
+        case sl_bt_evt_connection_opened_id:
+            sl_bt_advertiser_stop(advertising_set_handle);
+            DEBUG_LOG(DBG_CAT_BLE, "BLE connected...");
+            break;
+
+        case sl_bt_evt_connection_closed_id:
+            DEBUG_LOG(DBG_CAT_BLE, "BLE disconnected...");
             break;
 
    ///////////////////////////////////////////////////////////////////////////
