@@ -57,7 +57,6 @@ void sl_bt_init(void)
   sl_status_t err = sl_bt_init_stack(&config);
   (void) err;
   sl_bt_init_classes(bt_class_table);
-  sl_bt_init_on_demand_start();
 }
 
 SL_WEAK void sl_bt_on_event(sl_bt_msg_t* evt)

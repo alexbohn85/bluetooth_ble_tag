@@ -30,7 +30,7 @@
 // <cmuLfxoStartupDelay_16KCycles=> 16K cycles
 // <cmuLfxoStartupDelay_32KCycles=> 32K cycles
 // <i> Default: cmuLfxoStartupDelay_4KCycles
-#define SL_DEVICE_INIT_LFXO_TIMEOUT           cmuLfxoStartupDelay_1KCycles
+#define SL_DEVICE_INIT_LFXO_TIMEOUT           cmuLfxoStartupDelay_4KCycles
 // <<< end of configuration section >>>
 
 #endif // SL_DEVICE_INIT_LFXO_CONFIG_H

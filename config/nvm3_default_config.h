@@ -11,7 +11,7 @@
 // <i> should be equal to or higher than the number of NVM3 objects in the
 // <i> default NVM3 instance.
 // <i> Default: 200
-#define NVM3_DEFAULT_CACHE_SIZE  200
+#define NVM3_DEFAULT_CACHE_SIZE  10
 #endif
 
 #ifndef NVM3_DEFAULT_MAX_OBJECT_SIZE
@@ -35,7 +35,7 @@
 // <i> Size of the NVM3 storage region in flash. This size should be aligned with
 // <i> the flash page size of the device.
 // <i> Default: 40960
-#define NVM3_DEFAULT_NVM_SIZE  40960
+#define NVM3_DEFAULT_NVM_SIZE  32768
 #endif
 
 // </h>

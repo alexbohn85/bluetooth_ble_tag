@@ -4,12 +4,10 @@
  */
 
 #include "em_core.h"
-#include "rtcc.h"
-#include "em_ramfunc.h"
-#include "lf_decoder.h"
 
-//TODO Debug TMM on RTCC
+#include "lf_decoder.h"
 #include "tag_main_machine.h"
+#include "rtcc.h"
 
 
 //******************************************************************************
@@ -31,7 +29,6 @@
 //******************************************************************************
 // Non Static functions
 //******************************************************************************
-RAMFUNC_DECLARATOR
 void RTCC_IRQHandler(void)
 {
     CORE_DECLARE_IRQ_STATE;
@@ -40,12 +37,12 @@ void RTCC_IRQHandler(void)
     CORE_ENTER_ATOMIC();
     irq_flag = RTCC_IntGet();
 
-    //! Clear RTCC flags
+    // Clear RTCC flags
     RTCC_IntClear(irq_flag & (RTCC_IF_CC0 | RTCC_IF_CC1 | RTCC_IF_CC2));
     NVIC_ClearPendingIRQ(RTCC_IRQn);
 
 #if 1
-    //! Capture/Compare 0 handler - LF Decoder
+    // Capture/Compare 0 handler - LF Decoder
     if (irq_flag & RTCC_IF_CC0) {
         if ((RTCC->CC[0].CTRL & _RTCC_CC_CTRL_MODE_MASK) == RTCC_CC_CTRL_MODE_INPUTCAPTURE) {
             lf_decoder_capture_isr();
@@ -56,7 +53,7 @@ void RTCC_IRQHandler(void)
 #endif
 
 #if 1
-    //! Capture/Compare 1 handler - Tag Main Machine SysTick
+    // Capture/Compare 1 handler - Tag Main Machine SysTick
     if (irq_flag & RTCC_IF_CC1) {
         tag_main_run();
     }
@@ -69,20 +66,19 @@ void RTCC_IRQHandler(void)
 
     CORE_EXIT_ATOMIC();
 }
-RAMFUNC_DEFINITION_END
 
 
-//! Initialize RTCC Timer
+// Initialize RTCC Timer
 void rtcc_init(void)
 {
 
-    //! First we need to clock the peripheral otherwise elon musk is gonna cry!
-    //! RTCC Clock Enable (Assuming LFXO was initialized during sl_system_init)
+    // First we need to clock the peripheral otherwise elon musk is gonna cry!
+    // RTCC Clock Enable (Assuming LFXO was initialized during sl_system_init)
     CMU_ClockEnable(cmuClock_RTCC, true);
     CMU_ClockSelectSet(cmuClock_RTCCCLK, cmuSelect_LFXO);
 
 
-    //! RTCC Configuration
+    // RTCC Configuration
     RTCC_Init_TypeDef rtcc_cfg = RTCC_INIT_DEFAULT;
     rtcc_cfg.debugRun = false;
     rtcc_cfg.presc = rtccCntPresc_1;

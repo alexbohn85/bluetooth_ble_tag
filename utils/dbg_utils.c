@@ -12,6 +12,7 @@
 #include "sl_iostream_init_usart_instances.h"
 #include "sl_iostream_stdlib_config.h"
 #include "app_properties.h"
+
 #include "tag_main_machine.h"
 #include "ble_manager_machine.h"
 #include "temperature_machine.h"
@@ -89,10 +90,10 @@ void dbg_print_banner(void)
     printf(COLOR_B_WHITE "%35s | %s\n", "Watchdog", COLOR_B_RED "Disabled");
 #endif
 
-#if defined(TAG_DEBUG_MODE_PRESENT)
-    printf(COLOR_B_WHITE "%35s | %s\n", "Debug Mode", COLOR_B_GREEN "Enabled");
+#if defined(TAG_DEV_MODE_PRESENT)
+    printf(COLOR_B_WHITE "%35s | %s\n", "Debug Mode", COLOR_B_GREEN "Development");
 #else
-    printf(COLOR_B_WHITE "%35s | %s\n", "Debug Mode", COLOR_B_RED "Disabled");
+    printf(COLOR_B_WHITE "%35s | %s\n", "Debug Mode", COLOR_B_RED "Production");
 #endif
 
 #if defined(TAG_CLI_PRESENT)
@@ -104,8 +105,8 @@ void dbg_print_banner(void)
 
     printf(COLOR_B_WHITE "%35s | %s\n", "Logger", (dbg_is_log_enabled() ? COLOR_B_GREEN "On" : COLOR_B_RED "Off"));
     printf(COLOR_B_WHITE "%35s | %s\n", "Traps", (dbg_is_trap_enabled() ? COLOR_B_GREEN "On" : COLOR_B_RED "Off"));
-    printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d msec\n", "TMM Tick", TMM_DEFAULT_TICK_PERIOD_MS);
-    printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d msec\n", "TTM Slow Tasks Tick", TMM_DEFAULT_SLOW_TIMER_TICK_PERIOD_MS);
+    printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d msec\n", "TMM Tick", TMM_DEFAULT_TIMER_PERIOD_MS);
+    printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d msec\n", "TTM Slow Tasks Tick", TMM_DEFAULT_SLOW_TIMER_PERIOD_MS);
     printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d sec\n", "Beacon Rate (Fast)", BEACON_FAST_RATE_SEC);
     printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d min\n", "Beacon Rate (Slow)", (int)(BEACON_SLOW_RATE_SEC/60));
     printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d sec\n", "Temperature Report Rate", (int)(TTM_TIMER_PERIOD_SEC));
@@ -146,7 +147,7 @@ void dbg_log_deinit(void)
 //! @brief DEBUG_LOG (enable/disable)
 void dbg_log_enable(bool value)
 {
-#if defined(DBG_LOG)
+#if defined(TAG_LOG_PRESENT)
     log_enable = value;
 #else
     (void)(value);
@@ -157,7 +158,7 @@ void dbg_log_enable(bool value)
 //! @brief DEBUG_TRAP (enable/disable)
 void dbg_trap_enable(bool value)
 {
-#if defined(DBG_LOG)
+#if defined(TAG_LOG_PRESENT)
     trap_enable = value;
 #else
     (void)(value);
@@ -167,7 +168,7 @@ void dbg_trap_enable(bool value)
 
 bool dbg_is_log_enabled(void)
 {
-#if defined(DBG_LOG)
+#if defined(TAG_LOG_PRESENT)
     return log_enable;
 #else
     return false;
@@ -176,7 +177,7 @@ bool dbg_is_log_enabled(void)
 
 bool dbg_is_trap_enabled(void)
 {
-#if defined(DBG_LOG)
+#if defined(TAG_LOG_PRESENT)
     return trap_enable;
 #else
     return false;
@@ -185,7 +186,8 @@ bool dbg_is_trap_enabled(void)
 
 void dbg_trap(void)
 {
-    while(1);
+    DEBUG_LOG(DBG_CAT_SYSTEM, "__BKPT() -> connect debugger for analysis...");
+    __BKPT(0);  // Allow to connect debugger
 }
 
 char* dbg_log_filter_to_string(dbg_log_filters_t filter)
@@ -207,10 +209,10 @@ char* dbg_log_filter_to_string(dbg_log_filters_t filter)
             return COLOR_B_WHITE "GENERIC" COLOR_RST;
             break;
         case DBG_CAT_WARNING:
-            return COLOR_B_YELLOW "WARNING" COLOR_RST;
+            return COLOR_B_RED "WARNING" COLOR_RST;
             break;
         case DBG_CAT_SYSTEM:
-            return COLOR_B_YELLOW "SYSTEM" COLOR_RST;
+            return COLOR_B_BLUE "SYSTEM" COLOR_RST;
             break;
         case DBG_CAT_TEMP:
             return COLOR_B_WHITE "TEMPERATURE" COLOR_RST;
@@ -248,7 +250,7 @@ void dbg_log_set_filter(dbg_log_filters_t filter)
 char* tag_tag_type_to_string(void)
 {
     switch(TAG_TYPE) {
-        case TAG_UT3:
+        case TAG_UT3_ID:
             return "UT3";
             break;
         default:

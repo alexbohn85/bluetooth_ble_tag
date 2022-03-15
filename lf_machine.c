@@ -25,22 +25,19 @@
 //******************************************************************************
 // Defines
 //******************************************************************************
-#define LFM_WTA_DELAYED_CMD_EXEC_FLAG          (0x01)                           //! This flag indicate we received a WTA command and we are confirming it.
-#define LFM_WTA_BACKOFF_FLAG                   (0x02)                           //! After receiving and confirming WTA command we want to avoid receiving another command right away.
-#define LFM_STAYING_IN_FIELD_FLAG              (0x04)
 
 #define LFM_WTA_DELAYED_CMD_EXEC_COUNTS        (3)                              //! # of WTA commands events in a row before executing command.
 
 #define LF_CMD_NOP                             (0x00)
 
 #define LFM_TIMER_A_PERIOD_MS                  3000
-#define LFM_TIMER_A_PERIOD_TICK                (LFM_TIMER_A_PERIOD_MS / TMM_DEFAULT_TICK_PERIOD_MS)
+#define LFM_TIMER_A_PERIOD_RELOAD              (LFM_TIMER_A_PERIOD_MS / TMM_DEFAULT_TIMER_PERIOD_MS)
 
 #define LFM_TIMER_B_PERIOD_MS                  12000
-#define LFM_TIMER_B_PERIOD_TICK                (LFM_TIMER_B_PERIOD_MS / TMM_DEFAULT_TICK_PERIOD_MS)
+#define LFM_TIMER_B_PERIOD_RELOAD              (LFM_TIMER_B_PERIOD_MS / TMM_DEFAULT_TIMER_PERIOD_MS)
 
 #define LFM_TIMER_C_PERIOD_MS                  10000
-#define LFM_TIMER_C_PERIOD_TICK                (LFM_TIMER_C_PERIOD_MS / TMM_DEFAULT_TICK_PERIOD_MS)
+#define LFM_TIMER_C_PERIOD_RELOAD              (LFM_TIMER_C_PERIOD_MS / TMM_DEFAULT_TIMER_PERIOD_MS)
 
 //******************************************************************************
 // Data types
@@ -73,17 +70,17 @@ typedef struct lfm_fsm_t {
 // Global variables
 //******************************************************************************
 //! Internal sw timers
-static tag_sw_timer_t timer_exit_field;
-static tag_sw_timer_t timer_staying_field;
-static tag_sw_timer_t timer_wta_backoff;
+static volatile tag_sw_timer_t timer_exit_field;
+static volatile tag_sw_timer_t timer_staying_field;
+static volatile tag_sw_timer_t timer_wta_backoff;
 //! Internal data
 static lfm_data_t lfm_data;
 //! FSM state variable
-static lfm_fsm_t lfm_fsm;
+static volatile lfm_fsm_t lfm_fsm;
 //! FSM running flag
-static bool lfm_running;
+static volatile bool lfm_running;
 //! LF Beacon data
-static lfm_lf_beacon_t lf_beacon_data;
+static volatile lfm_lf_beacon_t lf_beacon_data;
 
 //******************************************************************************
 // Static functions
@@ -137,8 +134,9 @@ static void lfm_process_delayed_cmd(void)
         lfm_data.wta_cmd_counter++;
         if (lfm_data.wta_cmd_counter == LFM_WTA_DELAYED_CMD_EXEC_COUNTS) {
             lfm_decode_wta_command();
+            lfm_fsm.state = EXIT;                                               //! And exit.
         } else {
-            tag_sw_timer_reload(&timer_exit_field, LFM_TIMER_A_PERIOD_TICK);    //! Reload Exit Field timer.
+            tag_sw_timer_reload(&timer_exit_field, LFM_TIMER_A_PERIOD_RELOAD);  //! Reload Exit Field timer.
             lfm_fsm.state = EXIT;                                               //! And exit.
         }
     } else {
@@ -166,14 +164,18 @@ static void lfm_report_lf_event(lfm_lf_events_t event)
     lf_beacon_data.lf_data = lfm_data.lf_data_1;
     lf_beacon_data.lf_event = event;
 
+    if (event == STAYING_FIELD) {
+        tbm_set_event(TBM_LF_EVT, false);
+    } else {
+        tbm_set_event(TBM_LF_EVT, true);
+    }
+
     //! Signal LF Event to Tag Beacon Machine.
     DEBUG_LOG( DBG_CAT_TAG_LF,
                "Dispatch LF Event to Tag Beacon Machine, LF ID: 0x%.4X LF CMD: 0x%.2X LF EVENT: %s",
                lfm_data.lf_data_1.id,
                lfm_data.lf_data_1.command,
                lfm_lf_events_to_string(event));
-
-    tbm_set_event(TBM_LF_EVT);
 }
 
 //! @brief Process the LF Finite State Machine
@@ -186,7 +188,8 @@ static void lfm_process_step(void)
             lfm_fsm_start();
             lfm_data.lf_data_0.command = 0;
             lfm_data.lf_data_0.id = 0;
-            lfm_fsm.state = CHECK_EXIT_TIMEOUT;
+            //lfm_fsm.state = CHECK_EXIT_TIMEOUT;
+            lfm_fsm.state = EXIT;
             break;
 
         //!=====================================================================
@@ -254,7 +257,7 @@ static void lfm_process_step(void)
             lfm_data.wta_cmd_counter = 0;                                       //! Reset WTA delayed command execution counter
             lfm_data.lf_data_1 = lfm_data.lf_data_0;                            //! Buffer the new LF data.
             lfm_report_lf_event(WTA_DELAYED_CMD_EXEC);                          //! Report LF event Delayed LF Command.
-            tag_sw_timer_reload(&timer_exit_field, LFM_TIMER_A_PERIOD_TICK);    //! Load Exit Field Timeout timer.
+            tag_sw_timer_reload(&timer_exit_field, LFM_TIMER_A_PERIOD_RELOAD);    //! Load Exit Field Timeout timer.
             lfm_fsm.state = EXIT;                                               //! And exit.
 
             break;
@@ -264,16 +267,15 @@ static void lfm_process_step(void)
             if (lfm_data.lf_data_0.id == lfm_data.lf_data_1.id) {                          //! Check if new LF data is from same LF ID
                lfm_data.status |= LFM_STAYING_IN_FIELD_FLAG;                               //! Set Staying in Field flag
                 if (tag_sw_timer_is_stopped(&timer_staying_field)) {                       //! Check if Staying in Field timer is stopped.
-                    tag_sw_timer_reload(&timer_staying_field, LFM_TIMER_B_PERIOD_TICK);    //! Reload Exit Field timer.
-
+                    tag_sw_timer_reload(&timer_staying_field, LFM_TIMER_B_PERIOD_RELOAD);    //! Reload Exit Field timer.
                 }
             } else {
                 lfm_data.lf_data_1 = lfm_data.lf_data_0;                                   //! If different, buffer the new LF data.
-                tag_sw_timer_reload(&timer_staying_field, LFM_TIMER_B_PERIOD_TICK);        //! Reload Staying in Field timer.
+                tag_sw_timer_reload(&timer_staying_field, LFM_TIMER_B_PERIOD_RELOAD);        //! Reload Staying in Field timer.
                 lfm_report_lf_event(ENTERING_FIELD);                                       //! Report LF event Entering Field.
             }
 
-            tag_sw_timer_reload(&timer_exit_field, LFM_TIMER_A_PERIOD_TICK);               //! If true, load it.
+            tag_sw_timer_reload(&timer_exit_field, LFM_TIMER_A_PERIOD_RELOAD);               //! If true, load it.
             lfm_fsm.state = EXIT;                                                          //! And exit.
 
             break;
@@ -295,18 +297,27 @@ static void lfm_process_step(void)
 //******************************************************************************
 // Non Static functions
 //******************************************************************************
-lfm_lf_beacon_t lfm_get_beacon_data(void)
+lfm_lf_beacon_t* lfm_get_beacon_data(void)
 {
-    return lf_beacon_data;
+    return &lf_beacon_data;
 }
 
+uint8_t lfm_get_lf_status(void)
+{
+    return lfm_data.status;
+}
+
+//! @brief LF Machine
+//! @details Reports LF Field events to Tag Beacon Machine
 void lf_run(void)
 {
     //! Update internal sw timers
     lfm_tick();
+    //return;
 
     //! reset lfm process state machine
     lfm_fsm.state = INIT;
+    lfm_running = false;
 
     //! Run this machine until its completion.
     do {

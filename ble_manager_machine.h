@@ -1,5 +1,23 @@
-/*
- * ble_manager_machine.h
+/*!*****************************************************************************
+ * @file
+ * @brief BLE Manager Machine
+ *******************************************************************************
+ *
+ *  This module runs from Tag Main Machine ISR context.
+ *
+ *  This module is the only interface between Tag Application and BLE. Which
+ *  means it should encapsulate BLE concerns. Tag Application should not make
+ *  BLE API calls directly.
+ *
+ *  It manages BLE current state using BLE API calls and interact
+ *  with (ble_api.c running on main context).
+ *
+ *  It provides an interface for Tag Beacon Machine to queue new messages to
+ *  advertise.
+ *
+ *  It provides a configuration interface between Tag Application and BLE Stack.
+ *  For example: start and stop BLE Stack with proper callback so Tag Application
+ *  can be notified.
  *
  */
 
@@ -12,6 +30,8 @@
 //******************************************************************************
 // Defines
 //******************************************************************************
+#define BLE_MSG_MAX_DATASIZE         (8)  // Maximum number of data bytes in a beacon message
+
 //TODO Beacon Rate is here temporarily for test purposes. BLE_Machine is in charge of packet aggregation and BLE API app level control
 #define BEACON_FAST_RATE_SEC         (12)
 #define BEACON_SLOW_RATE_SEC         (600)
@@ -29,8 +49,6 @@ extern volatile bool bmm_stack_running;
 //******************************************************************************
 typedef enum bmm_states_t {
     BMM_PROCESS_CFG_REQ,
-    BMM_STOP_BLE,
-    BMM_START_BLE,
     BMM_PROCESS_MSG_EVENTS,
     BMM_START_ADV,
     BMM_START,
@@ -42,30 +60,33 @@ typedef struct bmm_fsm_t {
     bmm_states_t return_state;
 } bmm_fsm_t;
 
-typedef enum bmm_msg_type_t {
-    BLE_MSG_FW_VERSION,
-    BLE_MSG_MOTION,
-    BLE_MSG_LF,
-    BLE_MSG_LF_COMMAND_EXEC,
-    BLE_MSG_TEMP,
-    BLE_MSG_BUTTON_PRESS,
-    BLE_MSG_TAG_STATUS,
-    BLE_MSG_TAG_BEACON,
-    BLE_MSG_TAG_TAMPER
-} bmm_msg_type_t;
+enum bmm_msg_type_enum {
+    BLE_MSG_SIMPLE_BEACON = 1,
+    BLE_MSG_MOTION = 2,
+    BLE_MSG_LF = 3,
+    BLE_MSG_LF_COMMAND_DELAYED_EXEC = 4,
+    BLE_MSG_COMMAND_ACK = 5,
+    BLE_MSG_TEMPERATURE = 6,
+    BLE_MSG_BUTTON_PRESS = 7,
+    BLE_MSG_TAG_STATUS = 8,
+    BLE_MSG_TAG_TAMPER = 9,
+    BLE_MSG_BATTERY = 10
+};
 
 typedef struct bmm_msg_t {
-    bmm_msg_type_t type;
-    uint8_t *data;
+    uint8_t msg_type;
+    uint8_t msg_data[BLE_MSG_MAX_DATASIZE];
+    /* Note: length = (msg_type + msg_data) */
     uint8_t length;
-    uint8_t priority;
 } bmm_msg_t;
 
+
 typedef enum bmm_ble_adv_types_t {
-    LOCAL_NAME = 0x09,
-    UUID_16_SERVICE_DATA = 0x16,
-    MANUF_SPEC_DATA = 0xFF,
-    TX_POWER_LEVEL = 0x0A
+    ADV_TYPE_FLAGS = 0x01,
+    ADV_TYPE_COMPLETE_LOCAL_NAME = 0x09,
+    ADV_TYPE_UUID_16_SERVICE_DATA = 0x16,
+    ADV_TYPE_MANUF_SPEC_DATA = 0xFF,
+    ADV_TYPE_TX_POWER_LEVEL = 0x0A
 } bmm_ble_adv_types_t;
 
 //******************************************************************************
@@ -73,5 +94,8 @@ typedef enum bmm_ble_adv_types_t {
 //******************************************************************************
 void ble_manager_run(void);
 uint32_t bmm_init(void);
+bool bmm_queue_is_empty(void);
+bool bmm_queue_is_full(void);
+uint32_t bmm_enqueue_msg(bmm_msg_t *msg);
 
 #endif /* BLE_MANAGER_MACHINE_H_ */

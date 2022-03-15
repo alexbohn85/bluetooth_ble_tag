@@ -67,22 +67,37 @@
 #define SL_SPIDRV_AS39_SPI_PERIPHERAL            USART0
 #define SL_SPIDRV_AS39_SPI_PERIPHERAL_NO         0
 
-// USART0 TX on PC02
-#define SL_SPIDRV_AS39_SPI_TX_PORT               gpioPortC
-#define SL_SPIDRV_AS39_SPI_TX_PIN                2
-
-// USART0 RX on PC01
-#define SL_SPIDRV_AS39_SPI_RX_PORT               gpioPortC
-#define SL_SPIDRV_AS39_SPI_RX_PIN                1
-
-// USART0 CLK on PC03
-#define SL_SPIDRV_AS39_SPI_CLK_PORT              gpioPortC
-#define SL_SPIDRV_AS39_SPI_CLK_PIN               3
-
-// USART0 CS on PC04
-#define SL_SPIDRV_AS39_SPI_CS_PORT               gpioPortC
-#define SL_SPIDRV_AS39_SPI_CS_PIN                4
 // [USART_SL_SPIDRV_AS39_SPI]$
 // <<< sl:end pin_tool >>>
+
+//------------------------------------------------------------------------------
+// BLE Tag Customizations
+//------------------------------------------------------------------------------
+#include "tag_gpio_mapping.h"
+
+#undef SL_SPIDRV_AS39_SPI_TX_PORT
+#undef SL_SPIDRV_AS39_SPI_TX_PIN
+#undef SL_SPIDRV_AS39_SPI_RX_PORT
+#undef SL_SPIDRV_AS39_SPI_RX_PIN
+#undef SL_SPIDRV_AS39_SPI_CLK_PORT
+#undef SL_SPIDRV_AS39_SPI_CLK_PIN
+#undef SL_SPIDRV_AS39_SPI_CS_PORT
+#undef SL_SPIDRV_AS39_SPI_CS_PIN
+
+// USART0 TX
+#define SL_SPIDRV_AS39_SPI_TX_PORT               TAG_GPIO_SPI_TX_PORT
+#define SL_SPIDRV_AS39_SPI_TX_PIN                TAG_GPIO_SPI_TX_PIN
+
+// USART0 RX
+#define SL_SPIDRV_AS39_SPI_RX_PORT               TAG_GPIO_SPI_RX_PORT
+#define SL_SPIDRV_AS39_SPI_RX_PIN                TAG_GPIO_SPI_RX_PIN
+
+// USART0 CLK
+#define SL_SPIDRV_AS39_SPI_CLK_PORT              TAG_GPIO_SPI_CLK_PORT
+#define SL_SPIDRV_AS39_SPI_CLK_PIN               TAG_GPIO_SPI_CLK_PIN
+
+// USART0 CS
+#define SL_SPIDRV_AS39_SPI_CS_PORT               TAG_GPIO_AS39_SPI_CS_PORT
+#define SL_SPIDRV_AS39_SPI_CS_PIN                TAG_GPIO_AS39_SPI_CS_PIN
 
 #endif // SL_SPIDRV_AS39_SPI_CONFIG_H
