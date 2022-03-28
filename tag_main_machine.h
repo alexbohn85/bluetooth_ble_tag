@@ -43,7 +43,6 @@ typedef enum tmm_modes_t {
     TMM_NORMAL_MODE,
     TMM_MANUFACTURING_MODE,
     TMM_PAUSED,
-    TMM_CURRENT_DRAW_MODE
 } tmm_modes_t;
 
 //******************************************************************************
@@ -51,22 +50,9 @@ typedef enum tmm_modes_t {
 //******************************************************************************
 void tag_main_run(void);
 
-#if 0
- //! @brief Stop Tag Main Machine (Note: this will stop the timer)
-uint32_t tmm_stop(void);
+void tmm_pause(void);
 
-/*!
- * @brief Pause Tag Main Machine (Note: timer will be running while paused)
- * @return 0 if success, otherwise failure.
- */
-uint32_t tmm_pause(void);
-
-/*!
- * @brief Resume Tag Main Machine
- * @return 0 if success, otherwise failure.
- */
-uint32_t tmm_resume(void);
-#endif
+void tmm_resume(void);
 
 //! @brief Return TMM current mode
 tmm_modes_t tmm_get_mode(void);
