@@ -41,7 +41,7 @@
 #define PRS_LF_CH                    (0)
 
 #define LF_RTCC_CC0                  (0)            //!  LF decoder uses RTCC Capture/Compare channel 0
-#define LF_NUMBER_OF_BITS            (24)           //!  # of bits in the LF dataframe
+#define LF_NUMBER_OF_BITS            (24)           //!  # of bits in the LF data frame
 #define LF_FALSE_WAKEUP_TIMEOUT      (492)          //!  ~15 mS
 #define LF_CRC_OK_TIMEOUT            (32768)        //!  ~1500 mS
 
@@ -64,7 +64,6 @@
 
 #if defined(LF_TOL_RELAXED)
 #define LF_PREAMBLE_L                (49)           //!  ~1.500 mS
-//#define LF_PREAMBLE_L                (165)           //!  ~1.500 mS
 #define LF_PREAMBLE_H                (200)          //!  ~6.100 mS
 #define LF_START_BIT_GAP_MIN         (41)           //!  ~1.250 mS
 #define LF_START_BIT_GAP_MAX         (45)           //!  ~1.350 mS
@@ -125,8 +124,6 @@ static void lf_decoder_rtcc_cc0_config(lf_decoder_rtcc_modes_t mode, uint32_t ti
     } else if (mode == LF_RTCC_COMPARE) {
         RTCC_CCChConf_TypeDef cc0_cfg = RTCC_CH_INIT_COMPARE_DEFAULT;
         RTCC_ChannelInit(LF_RTCC_CC0, &cc0_cfg);
-
-        //! Setup a timeout on RTCC CC0 channel
         uint32_t timer_offset = timeout + RTCC_CounterGet();
         RTCC_ChannelCompareValueSet(LF_RTCC_CC0, timer_offset);
     }
@@ -159,7 +156,6 @@ static void lf_decoder_reset_and_backoff(uint32_t timeout)
     lf_decoder_compare_start(timeout);
 }
 
-//RAMFUNC_DECLARATOR
 static void lf_decoder_crc(uint8_t bit)
 {
     if ((decoder.crc ^ (bit << 1)) & 0x02) {
@@ -168,7 +164,6 @@ static void lf_decoder_crc(uint8_t bit)
         decoder.crc = decoder.crc >> 1;
     }
 }
-//RAMFUNC_DEFINITION_END
 
 //******************************************************************************
 // Non-Static functions
@@ -215,14 +210,11 @@ void lf_decoder_clear_lf_data(void)
     CORE_EXIT_ATOMIC();
 }
 
-//RAMFUNC_DECLARATOR
 void lf_decoder_compare_isr(void)
 {
     lf_decoder_capture_start();
 }
-//RAMFUNC_DEFINITION_END
 
-//RAMFUNC_DECLARATOR
 void lf_decoder_capture_isr(void)
 {
     decoder.curr_edge = RTCC_ChannelCaptureValueGet(LF_RTCC_CC0);
@@ -298,7 +290,7 @@ void lf_decoder_capture_isr(void)
 
             // On the fly CRC
             if (decoder.bit_counter > 6) {
-                //! Send current bit received to CRC on the fly calculation
+                // Send current bit received to CRC on the fly calculation
                 lf_decoder_crc(decoder.buffer & 0x01);
                 break;
             }
@@ -322,7 +314,6 @@ void lf_decoder_capture_isr(void)
             break;
     }
 }
-//RAMFUNC_DEFINITION_END
 
 bool lf_decoder_is_enabled(void)
 {
@@ -331,6 +322,9 @@ bool lf_decoder_is_enabled(void)
 
 void lf_decoder_enable(bool enable)
 {
+    CORE_DECLARE_IRQ_STATE;
+    CORE_ENTER_ATOMIC();
+
     decoder.is_enabled = enable;
 
     lf_decoder_clear_lf_data();
@@ -344,33 +338,29 @@ void lf_decoder_enable(bool enable)
     }
 
     RTCC_IntClear(RTCC_IF_CC0);
+
+    CORE_EXIT_ATOMIC();
 }
 
 void lf_decoder_init(void)
 {
-    //! Here we initialize everything required to start the LF Decoder
+    // Here we initialize everything required to start the LF Decoder
     memset(&decoder, 0, sizeof(decoder));
     decoder.state = PREAMBLE;
 
-    //! Check if AS393x device driver is initialized
+    // Check if AS393x device driver is initialized
     if(as39_get_settings_handler(NULL) == AS39_DRIVER_NOT_INITIATED) {
         DEBUG_LOG(DBG_CAT_WARNING, "ERROR! AS393x device driver was not initiated...");
         DEBUG_TRAP();
     } else {
 
-        //! We are connecting the LF DATA pin to the RTCC Capture using PRS
+        // We are connecting the LF DATA pin to the RTCC Capture using PRS
         lf_decoder_prs_init();
         lf_decoder_capture_start();
 
-        //! Enable RTCC CC1 Interrupt
-        RTCC_IntClear(RTCC_IEN_CC0);
-        RTCC_IntEnable(RTCC_IEN_CC0);
+        // Enable LF Decoder
+        lf_decoder_enable(true);
 
-        //! Enable LF Decoder
-        //lf_decoder_enable(true);
-
-        DEBUG_LOG(DBG_CAT_SYSTEM, "LF Decoder started...");
+        DEBUG_LOG(DBG_CAT_TAG_LF, "LF Decoder started...");
     }
 }
-
-

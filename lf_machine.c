@@ -188,8 +188,7 @@ static void lfm_process_step(void)
             lfm_fsm_start();
             lfm_data.lf_data_0.command = 0;
             lfm_data.lf_data_0.id = 0;
-            //lfm_fsm.state = CHECK_EXIT_TIMEOUT;
-            lfm_fsm.state = EXIT;
+            lfm_fsm.state = CHECK_EXIT_TIMEOUT;
             break;
 
         //!=====================================================================
