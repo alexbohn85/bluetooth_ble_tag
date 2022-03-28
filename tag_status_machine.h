@@ -33,23 +33,29 @@
 // Data types
 //******************************************************************************
 // Tag Status Data Struct
-typedef struct tsm_tag_status_flags_t {
-    uint8_t last_reset_cause;
+typedef struct tsm_tag_status_t {
+    uint8_t length;
     union {
-        uint8_t flags[2];
         uint16_t battery_low_bit: 1;
-        uint16_t lf_attenuation: 3;
-        uint16_t lf_enabled: 1;
-        uint16_t tag_op_mode: 2;
-        /* Reserved for future use */
-        uint16_t : 9;
+        uint16_t tamper: 1;
+        uint16_t tag_in_use: 1;
+        uint16_t tag_in_motion: 1;
+        uint16_t ambient_light: 1;
+        uint16_t lf_rx_motion: 1;
+        uint16_t deep_sleep: 1;
+        uint16_t lf_sensitivity: 1;
+        uint16_t slow_beacon_rate: 3;
+        uint16_t fast_beacon_rate: 3;
+        uint16_t reserved: 1;
+        uint16_t status_byte_extender: 1;
+        uint8_t byte[2];
     };
-} tsm_tag_status_flags_t;
+} tsm_tag_status_t;
 
 // Tag Status Beacon Data Struct
 typedef struct tsm_tag_status_beacon_t {
-    const uint8_t fw_rev[4];
-    tsm_tag_status_flags_t tag_status;
+    uint8_t fw_rev[4];
+    tsm_tag_status_t tag_status;
 } tsm_tag_status_beacon_t;
 
 //******************************************************************************

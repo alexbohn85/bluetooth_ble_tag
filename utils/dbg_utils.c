@@ -17,6 +17,7 @@
 #include "ble_manager_machine.h"
 #include "temperature_machine.h"
 #include "boot.h"
+#include "version.h"
 #include "dbg_utils.h"
 #include "git_log.h"
 
@@ -60,7 +61,10 @@ void dbg_print_banner(void)
     printf(COLOR_WHITE "\n\n=========================================================================" COLOR_RST "\n");
     printf(COLOR_B_YELLOW  "                   BLE Tag Firmware Initialization                       " COLOR_RST "\n");
     printf(COLOR_WHITE     "=========================================================================\n");
-    printf(COLOR_B_WHITE "%35s | " COLOR_CYAN "%.1d.%.1d.%.1d.%.1d \n", "Tag Firmware Version", FW_B4, FW_B3, FW_B2, FW_B1);
+    printf(COLOR_B_WHITE "%35s | " COLOR_CYAN "%.1d.%.1d.%.1d.%.1d \n", "Tag Firmware Version", firmware_revision[3],
+                                                                                                firmware_revision[2],
+                                                                                                firmware_revision[1],
+                                                                                                firmware_revision[0]);
     printf(COLOR_B_WHITE "%35s | " COLOR_CYAN "%s\n", "Build Date", COMPILATION_TIME);
     printf(COLOR_B_WHITE "%35s | " COLOR_CYAN "%s (0x%.2X)\n", "Tag Type", tag_tag_type_to_string(), tag_get_tag_type());
 

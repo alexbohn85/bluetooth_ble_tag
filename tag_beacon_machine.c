@@ -82,9 +82,8 @@ static void tbm_send_tag_status_beacon(void)
         msg.msg_data[i++] = data->fw_rev[1];
         msg.msg_data[i++] = data->fw_rev[2];
         msg.msg_data[i++] = data->fw_rev[3];
-        msg.msg_data[i++] = data->tag_status.last_reset_cause;
-        msg.msg_data[i++] = data->tag_status.flags[1];
-        msg.msg_data[i++] = data->tag_status.flags[0];
+        msg.msg_data[i++] = data->tag_status.byte[1];
+        msg.msg_data[i++] = data->tag_status.byte[0];
         msg.length = i + 1;
 
         status = bmm_enqueue_msg(&msg);
