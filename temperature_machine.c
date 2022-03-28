@@ -91,16 +91,6 @@ void temperature_run(void)
         //! Reload TTM Report Timer
         tag_sw_timer_reload(&ttm_report_timer, TTM_TIMER_PERIOD_SEC);
 
-        // Initialize tag persistent data structures
-        //TODO NVM development code here
-        //nvm_init();
-        //unsigned char data1[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
-        //unsigned char data2[] = { 11, 12, 13, 14, 15 };
-        //nvm_example(data1, sizeof(data1), data2, sizeof(data2));
-        //nvm_example();
-
-        //uint8_t mac_addr[6] = { 0xAA, 0xAA, 0xAA, 0xBB, 0xBB, 0xBB };
-        //nvm_write_mac_address(mac_addr, 6);
     }
 }
 

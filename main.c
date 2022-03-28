@@ -101,9 +101,6 @@ void tag_init(void)
     // Init LF Decoder
     lf_decoder_init();
 
-    //TODO Debug BLE on demand
-    //sl_bt_system_start_bluetooth();
-
 #if defined(TAG_WDOG_PRESENT)
     watchdog_init();
     DEBUG_LOG(DBG_CAT_SYSTEM, "Initializing WDOG process...");

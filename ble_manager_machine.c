@@ -47,9 +47,8 @@
 #define BLE_CIRCULAR_BUFFER_SIZE     (10)
 
 #define ADV_PAYLOAD_MAX_LEN          (31)
-//#define ADV_RETRANSMISSIONS          (3)
-#define ADV_RETRANSMISSIONS          (30)
-#define ADV_MIN_INTERVAL             (20)
+#define ADV_RETRANSMISSIONS          (3)
+#define ADV_MIN_INTERVAL             (50)
 #define ADV_MAX_INTERVAL             (100)
 
 // Manufacturer Specific Data UUID
@@ -98,10 +97,10 @@ static void ble_api_start_adv(uint8_t retransmissions, uint32_t min_interval, ui
                                       retransmissions);                         // max. num. adv. events
     app_assert_status(sc);
 
-    sl_bt_legacy_advertiser_set_data(advertising_set_handle,
-                                     sl_bt_advertiser_advertising_data_packet,
-                                     adv_payload.length,
-                                     adv_payload.data);
+    sl_bt_advertiser_set_data( advertising_set_handle,
+                               sl_bt_advertiser_advertising_data_packet,
+                               adv_payload.length,
+                               adv_payload.data);
     app_assert_status(sc);
 
     /* Set all adv channels
@@ -416,6 +415,8 @@ static void bmm_process_step(void)
                 } else {
                     bmm_fsm.state = BMM_EXIT;
                 }
+            } else {
+                bmm_fsm.state = BMM_EXIT;
             }
             break;
 

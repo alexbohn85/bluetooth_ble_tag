@@ -5,6 +5,7 @@
 
 
 #include "stdio.h"
+#include "string.h"
 #include "stdbool.h"
 #include "em_common.h"
 #include "app_assert.h"
@@ -15,6 +16,7 @@
 #include "tag_defines.h"
 #include "tag_beacon_machine.h"
 #include "tag_sw_timer.h"
+#include "version.h"
 #include "tag_status_machine.h"
 
 //******************************************************************************
@@ -24,91 +26,77 @@
 //******************************************************************************
 // Data types
 //******************************************************************************
-typedef enum tsm_tag_status_evt_t {
-    TSM_TAG_RESET_CAUSE_EVT,
-    TSM_LF_ATTENUATION_EVT,
-    TSM_LF_ENABLE_EVT,
-    TSM_MOTION_ENABLE_EVT,
-    TSM_FALL_DETECTION_ENABLE_EVT,
-    TSM_DEEP_SLEEP_MODE_ENABLE_EVT,
-    TSM_TAG_OP_MODE_EVT,
-    TSM_BATTERY_LOW_EVT
-} tsm_tag_status_evt_t;
+typedef enum tsm_tag_status_flags_t {
+    TSM_BATTERY_LOW_EVT,
+    TSM_TAMPER,
+    TSM_TAG_IN_USE,
+    TSM_TAG_IN_MOTION,
+    TSM_AMBIENT_LIGHT,
+    TSM_LF_RX_MOTION,
+    TSM_DEEP_SLEEP,
+    TSM_LF_SENSITIVITY,
+    TSM_SLOW_BEACON_RATE,
+    TSM_FAST_BEACON_RATE,
+    TSM_STATUS_BYTE_EXTENDER
+} tsm_tag_status_flags_t;
 
 //******************************************************************************
 // Global variables
 //******************************************************************************
 static tag_sw_timer_t tms_timer;
-static tsm_tag_status_beacon_t tag_status_beacon_data = { .fw_rev = {FW_B4, FW_B3, FW_B2, FW_B1},
-                                                          .tag_status = {0} };
+static tsm_tag_status_beacon_t tsm_beacon_data;
 
 //******************************************************************************
 // Static functions
 //******************************************************************************
 /**
- * @brief Helper function to set Tag Status Data Struct
- */
-static void tsm_set_tag_status(tsm_tag_status_evt_t event, bool enable, uint8_t data)
-{
-    switch(event) {
-        case TSM_TAG_RESET_CAUSE_EVT:
-            tag_status_beacon_data.tag_status.last_reset_cause = data;
-            break;
-
-        case TSM_LF_ATTENUATION_EVT:
-            tag_status_beacon_data.tag_status.lf_attenuation = (0x07 & data);
-            break;
-
-        case TSM_LF_ENABLE_EVT:
-            tag_status_beacon_data.tag_status.lf_enabled = enable;
-            break;
-
-        case TSM_BATTERY_LOW_EVT:
-            tag_status_beacon_data.tag_status.battery_low_bit = enable;
-            break;
-
-        default:
-            break;
-    }
-}
-
-/**
  * @brief Update Tag Status Data Struct
  */
 static void tsm_update_tag_status(void)
 {
-    // Get last reset cause
-    uint8_t reset_cause = (uint8_t)boot_get_reset_cause();
+    // Get FW Rev
+    memcpy(tsm_beacon_data.fw_rev, firmware_revision, sizeof(firmware_revision));
 
-    // Get current AS393x Antenna Attenuation (Gain Reduction)
-    as39_settings_handle_t as39_settings;
-    as39_get_settings_handler(&as39_settings);
-    uint8_t antenna_attenuation = as39_settings->registers.reg_4.GR;
+    //TODO as features are implemented there should be get interfaces..
+    // For now just populate with 0s
+    // Get Battery Low Bit
+    tsm_beacon_data.tag_status.battery_low_bit = 0;
+    // Get Tamper bit
+    tsm_beacon_data.tag_status.tamper = 0;
+    // Get Tag in Use bit
+    tsm_beacon_data.tag_status.tag_in_use = 0;
+    // Get Tag In Motion bit
+    tsm_beacon_data.tag_status.tag_in_motion = 0;
+    // Get Ambient Light bit
+    tsm_beacon_data.tag_status.ambient_light = 0;
+    // Get LF Rx Motion Triggered bit
+    tsm_beacon_data.tag_status.lf_rx_motion = 0;
+    // Get Deep Sleep Mode bit
+    tsm_beacon_data.tag_status.deep_sleep = 0;
+    // Get LF Sensitivity Bit 1-High / 0-Low
+    tsm_beacon_data.tag_status.lf_sensitivity = 0;
+    // Get Slow Beacon Rate configuration
+    tsm_beacon_data.tag_status.slow_beacon_rate = 0;
+    // Get Fast Beacon Rate configuration
+    tsm_beacon_data.tag_status.fast_beacon_rate = 0;
 
-
-
-    // Update Tag Status Data
-#if TAG_TYPE == TAG_UT3_ID
-    tsm_set_tag_status(TSM_LF_ATTENUATION_EVT, NULL, antenna_attenuation);
-    tsm_set_tag_status(TSM_TAG_RESET_CAUSE_EVT, NULL, reset_cause);
-
-#endif
+    // Set length
+    tsm_beacon_data.tag_status.length = 2;
 
 }
 
 //******************************************************************************
 // Non Static functions
 //******************************************************************************
-
-
 tsm_tag_status_beacon_t* tsm_get_tag_status_beacon_data(void)
 {
-    return &tag_status_beacon_data;
+    return &tsm_beacon_data;
 }
 
-/*!  @brief Tag Status Machine (Slow Task)
- *   @details Reports Tag Status Messages containing FW Revision and other state bytes
- ******************************************************************************/
+/**
+ * @brief Tag Status Machine (Slow Task)
+ * @details Reports Tag Status Message - Contains FW Revision + Tag Status Bytes
+ */
 void tag_status_run(void)
 {
     tag_sw_timer_tick(&tms_timer);
@@ -128,7 +116,11 @@ void tag_status_run(void)
 //! @brief Tag Status Machine Init
 uint32_t tsm_init(void)
 {
-    //! Init machine timer
+    // Init Tag Status Beacon Data
+    tsm_update_tag_status();
+
+    // Init Tag Status Machine internal timers
     tag_sw_timer_reload(&tms_timer, TMM_TAG_STATUS_PERIOD_SEC);
+
     return 0;
 }

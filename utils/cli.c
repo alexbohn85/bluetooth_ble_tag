@@ -13,6 +13,7 @@
 #include "sl_sleeptimer.h"
 
 #include "dbg_utils.h"
+#include "nvm.h"
 #include "boot.h"
 #include "cli.h"
 
@@ -53,26 +54,44 @@ static void cli_clear_input_buffer(void)
 
 static uint32_t cli_decode_mac_addr(void)
 {
+    volatile uint8_t i;
     uint32_t status;
     unsigned int m[6];
     char *ptr;
 
     // Grab pointer to the first ":" occurrence.
     ptr = strstr(cmd, ":");
+
     if (ptr != NULL) {
-        sscanf((ptr - 2), "%2X:%2X:%2X:%2X:%2X:%2X%*c", &m[0], &m[1], &m[2], &m[3], &m[4], &m[5]);
-        // Call function to save new mac to NVM.
-        uint8_t i;
-        printf("\n");
-        for (i = 0; i < (sizeof(m)/sizeof(m[0]) - 1); i++) {
-            printf("%2X:", (uint8_t)m[i]);
+        int ret;
+        ret = sscanf((ptr - 2), "%2X:%2X:%2X:%2X:%2X:%2X%*c", &m[0], &m[1], &m[2], &m[3], &m[4], &m[5]);
+
+        if (ret == 6) {
+            uint8_t mac[6];
+            for (i = 0; i < sizeof(mac); i++) {
+                mac[i] = (uint8_t)m[i];
+            }
+
+            // NVM Write
+            nvm_write_mac_address(mac);
+            // NVM Read Back (debug)
+            nvm_read_mac_address(mac);
+
+            printf("\n");
+            for (i = 0; i < (sizeof(mac)/sizeof(mac[0]) - 1); i++) {
+                printf("%2X:", (uint8_t)mac[i]);
+            }
+            printf("%2X", mac[i]);
+            status = 1;
+        } else {
+            // Bad MAC format?
+            status = 0;
+            printf("\nBad MAC format? expected hex format XX:XX:XX:XX:XX:XX");
         }
-        printf("%2X", m[i]);
-        status = 0;
 
     } else {
         // Bad MAC format?
-        status = 1;
+        status = 0;
         printf("\nBad MAC format? expected hex format XX:XX:XX:XX:XX:XX");
     }
 
@@ -81,7 +100,6 @@ static uint32_t cli_decode_mac_addr(void)
 
 static void cli_process_manufacturing_command(void)
 {
-    //TODO this step does not appear to be necessary anymore, we can use input buffer directly
     memset(cmd,'\0',sizeof(cmd));
     strcpy(cmd, input);
 
@@ -89,61 +107,47 @@ static void cli_process_manufacturing_command(void)
 
     // make sure log is off
 #if defined(TAG_DEV_MODE_PRESENT)
-    dbg_log_enable(false);
+    dbg_log_enable(true);
 #else
     dbg_log_enable(false);
 #endif
 
-    /*! decode commands !*/
+    /*! decode input commands !*/
 
     // enter current draw mode -------------------------------------------------
-    if (strcmp(cmd, "set mode current draw") == 0) {
+    if (strcmp(cmd, "set current draw mode") == 0) {
         printf(COLOR_B_WHITE"\n\n-> Entering current draw mode...\n");
         printf(COLOR_RST);
 
-    } else if (strstr(cmd, "set mac address") != NULL) {
-        if(cli_decode_mac_addr() == 0) {
-            printf("OK");
+    // write custom mac address to NVM -----------------------------------------
+    } else if (strstr(cmd, "set mac") != NULL) {
+        if(cli_decode_mac_addr()) {
+            printf("\nOK");
         } else {
-            printf("NOK");
+            printf("\nNOK");
         }
 
         // log filter on/off ---------------------------------------------------
     } else if (strcmp(cmd, "log filter on") == 0) {
-        dbg_log_filter_disable(false);
-        printf(COLOR_B_WHITE"\n\n-> Log filter enabled...\n");
-
-        // stop cli ------------------------------------------------------------
-    } else if (strcmp(cmd, "cli stop") == 0) {
-        cli_stop();
-
-        // git info ------------------------------------------------------------
-    } else if (strcmp(cmd, "git info") == 0) {
-        dbg_print_git_info();
+        dbg_log_enable(true);
+    } else if (strcmp(cmd, "log filter off") == 0) {
+        dbg_log_enable(false);
 
         // reset ---------------------------------------------------------------
     } else if (strcmp(cmd, "reset") == 0) {
         printf(COLOR_B_WHITE"\n\n-> Rebooting...\n");
         NVIC_SystemReset();
 
-        // banner --------------------------------------------------------------
-    } else if (strcmp(cmd, "banner") == 0) {
-        dbg_print_banner();
-
     } else if ((strcmp(cmd, "help") == 0) || (strcmp(cmd, "h") == 0)) {
         printf("\n\nusage: command [OPTION]...\n\n"                                                               \
   COLOR_B_WHITE"   Commands                Options                  Description\n" COLOR_RST                      \
-               "   log                     [on, off]                -> Turn log prints on/off\n"                  \
+               "   enter current draw mode                          -> Enter current draw mode\n"                  \
+               "   set mac <address>                                -> Write custom MAC Address to NVM <address> format XX:XX:XX:XX:XX:XX\n" \
                "   -----------------------------------------------------------------------------------------\n"   \
-               "   log filter              [on, off]                -> Log filter on/off\n"                       \
-               "   log filter add          [dbg_log_filters_t]      -> Add log filter to list\n"                  \
-               "   log filter remove       [dbg_log_filters_t]      -> Remove log filter from list\n"             \
-               "   log filter list                                  -> List available filters\n"                  \
+               "   log                     [on, off]                -> Log on/off\n"                              \
                "   -----------------------------------------------------------------------------------------\n"   \
-               "   cli stop                                         -> Stop cli process\n"                        \
-               "   git info                                         -> Show git info\n"                           \
                "   reset                                            -> System reset\n"                            \
-               "   banner                                           -> Show banner\n");
+               );
 
     } else {
         if(strcmp(cmd,"") != 0) {
@@ -230,6 +234,14 @@ static void cli_process_command(void)
                                 "   DBG_CAT_TEMP\n"
                                 "   DBG_CAT_TAG_LF\n");
 
+       // write custom mac address to NVM --------------------------------------
+    } else if (strstr(cmd, "set mac") != NULL) {
+        if(cli_decode_mac_addr()) {
+            printf("\nOK");
+        } else {
+            printf("\nNOK");
+        }
+
         // stop cli ------------------------------------------------------------
     } else if (strcmp(cmd, "cli stop") == 0) {
         cli_stop();
@@ -256,6 +268,8 @@ static void cli_process_command(void)
                "   log filter add          [dbg_log_filters_t]      -> Add log filter to list\n"                  \
                "   log filter remove       [dbg_log_filters_t]      -> Remove log filter from list\n"             \
                "   log filter list                                  -> List available filters\n"                  \
+               "   -----------------------------------------------------------------------------------------\n"   \
+               "   set mac <address>                                -> Write custom MAC Address to NVM <address> format XX:XX:XX:XX:XX:XX\n" \
                "   -----------------------------------------------------------------------------------------\n"   \
                "   cli stop                                         -> Stop cli process\n"                        \
                "   git info                                         -> Show git info\n"                           \
@@ -286,6 +300,50 @@ static void cli_refresh_console(void)
         printf("\b");
     }
 }
+
+/**
+ * @brief Process current line input (buffering)
+ * @param buf A character
+ */
+static void cli_process_input_manufacturing(char buf)
+{
+    size_t num_bytes;
+
+    // Ignore non printable keys (too keep this terminal simple we dont care about arrows, home, end keys)
+    if (buf == NON_PRINTABLE_CHAR) {
+        do {
+            sl_iostream_read(sl_iostream_uart_debug_handle, &buf, sizeof(buf), &num_bytes);
+        } while(num_bytes > 0);
+        return;
+    }
+
+    // Check if it is a <CTRL+C> command (kill active process)
+    if (buf == '\003') {
+        cli_clear_input_buffer();
+        dbg_log_enable(false);
+        printf("\n");
+
+    } else {
+
+        // Check if this is a <BACKSPACE>
+        if (buf == 0x7f) {
+            if (i > 0) {
+                input[--i] = '\0';
+            }
+        } else {
+            if (i > 164) {
+                printf("\b");
+            } else {
+                input[i] = buf;
+                ++i;
+            }
+        }
+    }
+
+    // We dont need to send back
+    //cli_refresh_console();
+}
+
 /**
  * @brief Process current line input (buffering)
  * @param buf A character
@@ -327,6 +385,7 @@ static void cli_process_input(char buf)
 
     cli_refresh_console();
 }
+
 /**
  * @brief Main CLI Process
  * @details CLI SLEEPTIMER API callback to process remote terminal inputs
@@ -354,8 +413,7 @@ static void cli_run_fsm(sl_sleeptimer_timer_handle_t *handle, void *data)
                 cli_process_manufacturing_command();
             } else {
                 // For development debug
-                //cli_process_command();
-                cli_process_manufacturing_command();
+                cli_process_command();
             }
         }
     }
