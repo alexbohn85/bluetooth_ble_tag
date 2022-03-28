@@ -89,32 +89,32 @@ void boot_print_reset_cause(void)
 {
     // WDOG
     if (reset_cause & EMU_RSTCAUSE_WDOG0) {
-        _boot_print_reset_cause("[Reset Cause] Watch Dog Reset EMU_RSTCAUSE_WDOG0");
+        _boot_print_reset_cause("[Last Reset Cause] Watch Dog Reset EMU_RSTCAUSE_WDOG0");
     }
 
     // POR
     if (reset_cause & EMU_RSTCAUSE_POR) {
-        _boot_print_reset_cause("[Reset Cause] Power On Reset EMU_RSTCAUSE_POR");
+        _boot_print_reset_cause("[Last Reset Cause] Power On Reset EMU_RSTCAUSE_POR");
     }
 
     // RESET PIN
     if (reset_cause & EMU_RSTCAUSE_PIN) {
-        _boot_print_reset_cause("[Reset Cause] Reset Pin EMU_RSTCAUSE_PIN");
+        _boot_print_reset_cause("[Last Reset Cause] Reset Pin EMU_RSTCAUSE_PIN");
     }
 
     // M33 LOCKUP
     if (reset_cause & EMU_RSTCAUSE_LOCKUP) {
-        _boot_print_reset_cause("[Reset Cause] M33 Core Lockup Reset EMU_RSTCAUSE_LOCKUP");
+        _boot_print_reset_cause("[Last Reset Cause] M33 Core Lockup Reset EMU_RSTCAUSE_LOCKUP");
     }
 
     // SYSREQ
     if (reset_cause & EMU_RSTCAUSE_SYSREQ) {
-        _boot_print_reset_cause("[Reset Cause] M33 Core System Reset EMU_RSTCAUSE_SYSREQ");
+        _boot_print_reset_cause("[Last Reset Cause] M33 Core System Reset EMU_RSTCAUSE_SYSREQ");
     }
 
     // VDD BOD (Brown-Out Reset)
     if (reset_cause & EMU_RSTCAUSE_DVDDBOD) {
-        _boot_print_reset_cause("[Reset Cause] Brown Out Reset EMU_RSTCAUSE_DVDDBOD");
+        _boot_print_reset_cause("[Last Reset Cause] Brown Out Reset EMU_RSTCAUSE_DVDDBOD");
     }
 }
 
