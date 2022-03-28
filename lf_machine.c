@@ -70,9 +70,9 @@ typedef struct lfm_fsm_t {
 // Global variables
 //******************************************************************************
 //! Internal sw timers
-static volatile tag_sw_timer_t timer_exit_field;
-static volatile tag_sw_timer_t timer_staying_field;
-static volatile tag_sw_timer_t timer_wta_backoff;
+static tag_sw_timer_t timer_exit_field;
+static tag_sw_timer_t timer_staying_field;
+static tag_sw_timer_t timer_wta_backoff;
 //! Internal data
 static lfm_data_t lfm_data;
 //! FSM state variable
@@ -80,7 +80,7 @@ static volatile lfm_fsm_t lfm_fsm;
 //! FSM running flag
 static volatile bool lfm_running;
 //! LF Beacon data
-static volatile lfm_lf_beacon_t lf_beacon_data;
+static lfm_lf_beacon_t lf_beacon_data;
 
 //******************************************************************************
 // Static functions

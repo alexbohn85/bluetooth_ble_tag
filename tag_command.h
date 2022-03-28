@@ -23,9 +23,7 @@
 //******************************************************************************
 // Interface
 //******************************************************************************
-void tcm_cmd_enter_deepsleep_mode(void);
+void tcm_cmd_enter_deep_sleep_mode(void);
 void tcm_cmd_enter_current_draw_mode(void);
-void tcm_cmd_lf_decoder_enable(bool enable);
-void tcm_cmd_write_mac_address(uint8_t *mac_addr);
 
 #endif /* TAG_COMMAND_H_ */

@@ -335,8 +335,6 @@ void lf_decoder_enable(bool enable)
 
     lf_decoder_clear_lf_data();
 
-    RTCC_IntClear(RTCC_IEN_CC0);
-
     if (enable) {
         RTCC_IntEnable(RTCC_IEN_CC0);
         lf_decoder_capture_start();
@@ -344,6 +342,8 @@ void lf_decoder_enable(bool enable)
         RTCC_IntDisable(RTCC_IEN_CC0);
         as39_antenna_enable(false, false, false);
     }
+
+    RTCC_IntClear(RTCC_IF_CC0);
 }
 
 void lf_decoder_init(void)

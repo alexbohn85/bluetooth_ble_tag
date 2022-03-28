@@ -244,7 +244,6 @@ static void bmm_start_adv(void)
 
 static void bmm_append_adv_flags(uint8_t *pdu_len, uint8_t flags)
 {
-
     adv_payload.data[(*pdu_len)++] = 0x02;
     adv_payload.data[(*pdu_len)++] = ADV_TYPE_FLAGS;
     adv_payload.data[(*pdu_len)++] = flags;

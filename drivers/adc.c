@@ -45,10 +45,10 @@ void adc_init(void)
 
     IADC_Result_t result;
     result.data = 0;
-    DEBUG_LOG(DBG_CAT_GENERIC, "ADC result = %8X", result.data);
+    DEBUG_LOG(DBG_CAT_GENERIC, "ADC result = %lX", result.data);
 
     result = IADC_readSingleResult(IADC0);
-    DEBUG_LOG(DBG_CAT_GENERIC, "ADC result = %8X", result.data);
+    DEBUG_LOG(DBG_CAT_GENERIC, "ADC result = %lX", result.data);
 
 }
 

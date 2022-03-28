@@ -13,6 +13,8 @@
 #include "sl_sleeptimer.h"
 
 #include "dbg_utils.h"
+#include "lf_decoder.h"
+#include "tag_main_machine.h"
 #include "nvm.h"
 #include "boot.h"
 #include "cli.h"
@@ -115,8 +117,14 @@ static void cli_process_manufacturing_command(void)
     /*! decode input commands !*/
 
     // enter current draw mode -------------------------------------------------
-    if (strcmp(cmd, "set current draw mode") == 0) {
-        printf(COLOR_B_WHITE"\n\n-> Entering current draw mode...\n");
+    if (strcmp(cmd, "current draw mode") == 0) {
+        // Turn off LF Decoder
+        lf_decoder_enable(false);
+        // Stop Tag Main Machine
+        tmm_pause();
+        // Stop CLI
+        cli_stop();
+        printf(COLOR_B_WHITE"\n\n-> Entering current draw mode... reset MCU to exit\n");
         printf(COLOR_RST);
 
     // write custom mac address to NVM -----------------------------------------
@@ -141,7 +149,7 @@ static void cli_process_manufacturing_command(void)
     } else if ((strcmp(cmd, "help") == 0) || (strcmp(cmd, "h") == 0)) {
         printf("\n\nusage: command [OPTION]...\n\n"                                                               \
   COLOR_B_WHITE"   Commands                Options                  Description\n" COLOR_RST                      \
-               "   enter current draw mode                          -> Enter current draw mode\n"                  \
+               "   current draw mode                                -> Enter current draw mode\n"                  \
                "   set mac <address>                                -> Write custom MAC Address to NVM <address> format XX:XX:XX:XX:XX:XX\n" \
                "   -----------------------------------------------------------------------------------------\n"   \
                "   log                     [on, off]                -> Log on/off\n"                              \
@@ -299,49 +307,6 @@ static void cli_refresh_console(void)
         // Send backspace
         printf("\b");
     }
-}
-
-/**
- * @brief Process current line input (buffering)
- * @param buf A character
- */
-static void cli_process_input_manufacturing(char buf)
-{
-    size_t num_bytes;
-
-    // Ignore non printable keys (too keep this terminal simple we dont care about arrows, home, end keys)
-    if (buf == NON_PRINTABLE_CHAR) {
-        do {
-            sl_iostream_read(sl_iostream_uart_debug_handle, &buf, sizeof(buf), &num_bytes);
-        } while(num_bytes > 0);
-        return;
-    }
-
-    // Check if it is a <CTRL+C> command (kill active process)
-    if (buf == '\003') {
-        cli_clear_input_buffer();
-        dbg_log_enable(false);
-        printf("\n");
-
-    } else {
-
-        // Check if this is a <BACKSPACE>
-        if (buf == 0x7f) {
-            if (i > 0) {
-                input[--i] = '\0';
-            }
-        } else {
-            if (i > 164) {
-                printf("\b");
-            } else {
-                input[i] = buf;
-                ++i;
-            }
-        }
-    }
-
-    // We dont need to send back
-    //cli_refresh_console();
 }
 
 /**
