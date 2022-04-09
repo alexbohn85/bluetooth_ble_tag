@@ -61,7 +61,7 @@ static uint32_t cli_decode_mac_addr(void)
     unsigned int m[6];
     char *ptr;
 
-    // Grab pointer to the first ":" occurrence.
+    // Grab pointer to the first ':' occurrence.
     ptr = strstr(cmd, ":");
 
     if (ptr != NULL) {
@@ -75,25 +75,28 @@ static uint32_t cli_decode_mac_addr(void)
             }
 
             // NVM Write
-            nvm_write_mac_address(mac);
-            // NVM Read Back (debug)
+            status = nvm_write_mac_address(mac);
+
+            /*
+             * NVM Read Back (debug code)
             nvm_read_mac_address(mac);
 
             printf("\n");
-            for (i = 0; i < (sizeof(mac)/sizeof(mac[0]) - 1); i++) {
+            uint8_t length = sizeof(mac)/sizeof(mac[0]);
+            for (i = 0; i < (length - 1); i++) {
                 printf("%2X:", (uint8_t)mac[i]);
             }
             printf("%2X", mac[i]);
-            status = 1;
+            */
         } else {
             // Bad MAC format?
-            status = 0;
+            status = 1;
             printf("\nBad MAC format? expected hex format XX:XX:XX:XX:XX:XX");
         }
 
     } else {
         // Bad MAC format?
-        status = 0;
+        status = 1;
         printf("\nBad MAC format? expected hex format XX:XX:XX:XX:XX:XX");
     }
 
@@ -159,11 +162,11 @@ static void cli_process_manufacturing_command(void)
 
     } else {
         if(strcmp(cmd,"") != 0) {
-            printf("\n... type \"help\" or \"h\" for commands usage\n> ");
+            //printf("\n... type \"help\" or \"h\" for commands usage\n> ");
         }
     } //--- END OF INPUT DECODE PROCESS
 
-    printf("\n> ");
+    printf("\n");
 
 }
 
@@ -175,7 +178,7 @@ static void cli_process_command(void)
 
     cli_clear_input_buffer();
 
-    /*! decode commands !*/
+    /*! decode commands ! */
 
     // log on/off --------------------------------------------------------------
     if (strcmp(cmd, "log on") == 0) {

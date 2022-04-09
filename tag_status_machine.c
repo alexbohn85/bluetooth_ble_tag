@@ -22,66 +22,69 @@
 //******************************************************************************
 // Defines
 //******************************************************************************
+#define TSM_FEATURE_NOT_SUPPORTED            (0)
 
 //******************************************************************************
 // Data types
 //******************************************************************************
-typedef enum tsm_tag_status_flags_t {
-    TSM_BATTERY_LOW_EVT,
-    TSM_TAMPER,
-    TSM_TAG_IN_USE,
-    TSM_TAG_IN_MOTION,
-    TSM_AMBIENT_LIGHT,
-    TSM_LF_RX_MOTION,
-    TSM_DEEP_SLEEP,
-    TSM_LF_SENSITIVITY,
-    TSM_SLOW_BEACON_RATE,
-    TSM_FAST_BEACON_RATE,
-    TSM_STATUS_BYTE_EXTENDER
-} tsm_tag_status_flags_t;
 
 //******************************************************************************
 // Global variables
 //******************************************************************************
-static tag_sw_timer_t tms_timer;
-static tsm_tag_status_beacon_t tsm_beacon_data;
+static tag_sw_timer_t tsm_timer;
+static tsm_tag_status_beacon_t tsm_status_beacon;
+static tsm_tag_ext_status_beacon_t tsm_ext_status_beacon;
 
 //******************************************************************************
 // Static functions
 //******************************************************************************
 /**
- * @brief Update Tag Status Data Struct
+ * @brief Update Tag Extended Status Beacon Data
+ */
+static void tsm_update_tag_extended_status(void)
+{
+    // Get FW Rev
+    memcpy(tsm_ext_status_beacon.fw_rev, firmware_revision, sizeof(firmware_revision));
+
+    // Get Fast Beacon Rate configuration
+    tsm_ext_status_beacon.ext_status.fast_beacon_rate = 0;
+
+
+    // Get LF Gain Reduction Setting
+    tsm_ext_status_beacon.ext_status.lf_sensitivity = as39_get_attenuation_set();
+
+    // Get Slow Beacon Rate configuration
+    tsm_ext_status_beacon.ext_status.slow_beacon_rate = 0;
+}
+
+/**
+ * @brief Update Tag Status Beacon Data
  */
 static void tsm_update_tag_status(void)
 {
-    // Get FW Rev
-    memcpy(tsm_beacon_data.fw_rev, firmware_revision, sizeof(firmware_revision));
-
     //TODO as features are implemented there should be get interfaces..
     // For now just populate with 0s
+#if (TAG_ID == UT3_ID)
     // Get Battery Low Bit
-    tsm_beacon_data.tag_status.battery_low_bit = 0;
-    // Get Tamper bit
-    tsm_beacon_data.tag_status.tamper = 0;
-    // Get Tag in Use bit
-    tsm_beacon_data.tag_status.tag_in_use = 0;
-    // Get Tag In Motion bit
-    tsm_beacon_data.tag_status.tag_in_motion = 0;
-    // Get Ambient Light bit
-    tsm_beacon_data.tag_status.ambient_light = 0;
-    // Get LF Rx Motion Triggered bit
-    tsm_beacon_data.tag_status.lf_rx_motion = 0;
-    // Get Deep Sleep Mode bit
-    tsm_beacon_data.tag_status.deep_sleep = 0;
-    // Get LF Sensitivity Bit 1-High / 0-Low
-    tsm_beacon_data.tag_status.lf_sensitivity = 0;
-    // Get Slow Beacon Rate configuration
-    tsm_beacon_data.tag_status.slow_beacon_rate = 0;
-    // Get Fast Beacon Rate configuration
-    tsm_beacon_data.tag_status.fast_beacon_rate = 0;
+    tsm_status_beacon.status.battery_low_alarm = 0;
 
-    // Set length
-    tsm_beacon_data.tag_status.length = 2;
+    // Get Tamper bit (not supported on UT3)
+    tsm_status_beacon.status.tamper_alarm = 0;
+    // Get LF Rx Motion Triggered bit (not supported for UT3)
+    tsm_status_beacon.status.lf_rx_on_motion = TSM_FEATURE_NOT_SUPPORTED;
+
+    // Get Tag in Use bit
+    tsm_status_beacon.status.tag_in_use = 0;
+
+    // Get Tag In Motion bit
+    tsm_status_beacon.status.tag_in_motion = 0;
+
+    // Get Deep Sleep Mode bit (1-deep-sleep / 0-normal)
+    tsm_status_beacon.status.deep_sleep = 0;
+
+    // Get Ambient Light bit (not supported on UT3)
+    tsm_status_beacon.status.ambient_light_alarm = TSM_FEATURE_NOT_SUPPORTED;
+#endif
 
 }
 
@@ -90,27 +93,43 @@ static void tsm_update_tag_status(void)
 //******************************************************************************
 tsm_tag_status_beacon_t* tsm_get_tag_status_beacon_data(void)
 {
-    return &tsm_beacon_data;
+    return &tsm_status_beacon;
+}
+
+tsm_tag_ext_status_beacon_t* tsm_get_tag_ext_status_beacon_data(void)
+{
+    return &tsm_ext_status_beacon;
 }
 
 /**
- * @brief Tag Status Machine (Slow Task)
- * @details Reports Tag Status Message - Contains FW Revision + Tag Status Bytes
+ * @brief Tag Status Machine - Extended Status (Slow Task)
+ * @details Reports Tag Extended Status Message - Contains FW Revision + Extended Status Bytes
+ */
+void tag_ext_status_run(void)
+{
+    tag_sw_timer_tick(&tsm_timer);
+
+    if(tag_sw_timer_is_expired(&tsm_timer)) {
+
+        // Updated Tag Extended Status Data
+        tsm_update_tag_extended_status();
+
+        // Send Asynchronous Tag Beacon Event to Tag Beacon Machine
+        tbm_set_event(TBM_EXT_STATUS_EVT, true);
+
+        // Reload TSM timer
+        tag_sw_timer_reload(&tsm_timer, TMM_TAG_EXT_STATUS_PERIOD_SEC);
+    }
+}
+
+/**
+ * @brief Tag Status Machine (Fast Task)
+ * @details Update Tag Status Byte
  */
 void tag_status_run(void)
 {
-    tag_sw_timer_tick(&tms_timer);
-    if(tag_sw_timer_is_expired(&tms_timer)) {
-
-        // Update Tag Status Data
-        tsm_update_tag_status();
-
-        // Send Asynchronous Tag Beacon Event to Tag Beacon Machine
-        tbm_set_event(TBM_STATUS_EVT, true);
-
-        // Reload TSM timer
-        tag_sw_timer_reload(&tms_timer, TMM_TAG_STATUS_PERIOD_SEC);
-    }
+    // Update Tag Status Data ( this needs to be updated on every TMM tick )
+    tsm_update_tag_status();
 }
 
 //! @brief Tag Status Machine Init
@@ -120,7 +139,7 @@ uint32_t tsm_init(void)
     tsm_update_tag_status();
 
     // Init Tag Status Machine internal timers
-    tag_sw_timer_reload(&tms_timer, TMM_TAG_STATUS_PERIOD_SEC);
+    tag_sw_timer_reload(&tsm_timer, TMM_TAG_EXT_STATUS_PERIOD_SEC);
 
     return 0;
 }

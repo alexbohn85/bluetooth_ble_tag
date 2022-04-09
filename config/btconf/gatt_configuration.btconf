@@ -9,7 +9,7 @@
     <!--Device Name-->
     <characteristic const="false" id="device_name" name="Device Name" sourceId="org.bluetooth.characteristic.gap.device_name" uuid="2A00">
       <informativeText/>
-      <value length="13" type="utf-8" variable_length="false">Empty Example</value>
+      <value length="3" type="utf-8" variable_length="false">UT3</value>
       <properties>
         <read authenticated="false" bonded="false" encrypted="false"/>
         <write authenticated="false" bonded="false" encrypted="false"/>
@@ -33,7 +33,7 @@
     <!--Manufacturer Name String-->
     <characteristic const="true" id="manufacturer_name_string" name="Manufacturer Name String" sourceId="org.bluetooth.characteristic.manufacturer_name_string" uuid="2A29">
       <informativeText>Abstract:  The value of this characteristic is a UTF-8 string representing the name of the manufacturer of the device.  </informativeText>
-      <value length="12" type="utf-8" variable_length="false">Silicon Labs</value>
+      <value length="12" type="utf-8" variable_length="false">UT3</value>
       <properties>
         <read authenticated="false" bonded="false" encrypted="false"/>
       </properties>
@@ -58,6 +58,7 @@
       <informativeText/>
       <value length="0" type="user" variable_length="false"/>
       <properties>
+        <read authenticated="false" bonded="false" encrypted="false"/>
         <write authenticated="false" bonded="false" encrypted="false"/>
       </properties>
     </characteristic>

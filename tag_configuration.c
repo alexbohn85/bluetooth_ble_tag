@@ -1,13 +1,9 @@
 /*
- * tag_command.c
+ * tag_configuration.c
  *
  */
 
-#include "stdio.h"
-#include "stdbool.h"
-
 #include "dbg_utils.h"
-#include "tag_sw_timer.h"
 
 
 //******************************************************************************
@@ -29,15 +25,3 @@
 //******************************************************************************
 // Non Static functions
 //******************************************************************************
-void tcm_cmd_enter_deep_sleep_mode(void)
-{
-    // Write bit mode to NVM
-    // Stop RTCC
-    // Stop
-}
-
-void tcm_cmd_enter_current_draw_mode(void)
-{
-
-}
-

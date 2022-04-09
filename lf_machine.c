@@ -178,7 +178,9 @@ static void lfm_report_lf_event(lfm_lf_events_t event)
                lfm_lf_events_to_string(event));
 }
 
-//! @brief Process the LF Finite State Machine
+/**
+ * @brief Process the LF Finite State Machine
+ */
 static void lfm_process_step(void)
 {
     switch (lfm_fsm.state) {
@@ -239,6 +241,9 @@ static void lfm_process_step(void)
                     DEBUG_LOG(DBG_CAT_TAG_LF, "WTA Back-off timer is still running..");   //! If timer is still running just ignore this command.
                     lfm_fsm.state = EXIT;                                                 //! And exit.
                 }
+            } else {
+                lfm_data.status |= LFM_WTA_BACKOFF_FLAG;
+                tag_sw_timer_reload(&timer_wta_backoff, LFM_TIMER_C_PERIOD_MS);
             }
             break;
 
@@ -308,7 +313,7 @@ uint8_t lfm_get_lf_status(void)
 
 //! @brief LF Machine
 //! @details Reports LF Field events to Tag Beacon Machine
-void lf_run(void)
+void lfm_run(void)
 {
     //! Update internal sw timers
     lfm_tick();

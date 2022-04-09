@@ -5,13 +5,11 @@
  *
  */
 
-#include <template.h>
-#include "em_common.h"
-#include "app_assert.h"
-#include "dbg_utils.h"
-#include "stdio.h"
 #include "stdbool.h"
+#include "stdio.h"
 
+#include "template.h"
+#include "dbg_utils.h"
 
 
 //******************************************************************************

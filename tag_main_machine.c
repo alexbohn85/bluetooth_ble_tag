@@ -8,28 +8,30 @@
  * to yield back to the main machine super loop.
  */
 
+#include "stdio.h"
+#include "stdbool.h"
 
 #include "em_common.h"
 #include "em_cmu.h"
 #include "em_ramfunc.h"
 #include "em_rtcc.h"
-
 #include "em_core.h"
-#include "app_assert.h"
 #include "sl_sleeptimer.h"
 #include "sl_power_manager.h"
 #include "sl_power_manager_debug.h"
+#include "app_assert.h"
 
-#include "stdio.h"
-#include "stdbool.h"
 
 #include "dbg_utils.h"
+#include "tag_power_manager.h"
 #include "tag_sw_timer.h"
 #include "wdog.h"
 #include "lf_machine.h"
 #include "tag_beacon_machine.h"
 #include "tag_status_machine.h"
 #include "temperature_machine.h"
+#include "battery_machine.h"
+#include "tag_uptime_machine.h"
 #include "ble_manager_machine.h"
 #include "tag_main_machine.h"
 
@@ -37,7 +39,6 @@
 //******************************************************************************
 // Defines
 //******************************************************************************
-//! @brief DEBUG_LOG macro for Tag Main Machine
 #define DEBUG_TTM(format, args...)     DEBUG_LOG(DBG_CAT_TAG_MAIN, format, ##args)
 
 //******************************************************************************
@@ -47,16 +48,22 @@
 //******************************************************************************
 // Global shared variables
 //******************************************************************************
-//! @brief Tag Main Machine current op. mode
 static volatile tmm_modes_t tmm_current_mode;
 static volatile tmm_modes_t tmm_stored_mode;
-
-//! @brief SW timer for slow tasks.
 static tag_sw_timer_t tmm_slow_timer;
 
 //******************************************************************************
 // Static functions
 //******************************************************************************
+/**
+ *  @brief Set Tag Main Machine current state
+ *  @param @ref tmm_modes_t
+ */
+static void tmm_set_mode(tmm_modes_t state)
+{
+    tmm_current_mode = state;
+}
+
 //! @brief Convert tmm_current_mode state to string.
 static char* tmm_current_mode_to_string(void)
 {
@@ -76,15 +83,15 @@ static char* tmm_current_mode_to_string(void)
     }
 }
 
-//! @brief Reload Tag Main Machine RTCC compare. a.k.a "Tag Main SysTick"
+//! @brief Reload Tag Main Machine RTCC compare
 static void tmm_rtcc_update(void)
 {
-    //! Update SysTick
+    // Update TMM RTCC Main Tick
     uint32_t timer_offset = ((uint32_t)TMM_DEFAULT_TIMER_RELOAD) + RTCC_CounterGet();
     RTCC_ChannelCompareValueSet(TMM_RTCC_CC1, timer_offset);
 }
 
-/*!
+/**
  *  @brief Tag Main Machine (Slow Tasks)
  *  @details Add here tasks that can run less periodically (on seconds base)
  *  @note Tick period is defined in @ref TMM_DEFAULT_SLOW_TIMER_RELOAD
@@ -94,35 +101,45 @@ static void tmm_slow_tasks_run(void)
     tag_sw_timer_tick(&tmm_slow_timer);
 
     if (tag_sw_timer_is_expired(&tmm_slow_timer)) {
+
+        // Used to debug power manager (enable this debug in power manager menu)
+        //sl_power_manager_debug_print_em_requirements();
+
+        // Reload Slow Task Timer
         tag_sw_timer_reload(&tmm_slow_timer, TMM_DEFAULT_SLOW_TIMER_RELOAD);
 
-        //! Add slower machines here
-        temperature_run();
-        tag_status_run();
-    }
-}
+        //**********************************************************************
+        // Add below all slow tasks calls
+        //**********************************************************************
 
-/*!
- *  @brief Set Tag Main Machine current state
- *  @param @ref tmm_modes_t
- */
-static void tmm_set_mode(tmm_modes_t state)
-{
-    tmm_current_mode = state;
+        // Battery Machine Process
+        //battery_machine_run();
+
+        // Tag Uptime Machine Process
+        tag_uptime_run();
+
+        // Temperature Machine Process
+        temperature_run();
+
+        // Tag Extended Status Machine Process
+        tag_ext_status_run();
+    }
 }
 
 //! @brief It calls all the machine init routines.
 static uint32_t tmm_init_machines(void)
 {
-    volatile uint32_t status;
+    uint32_t status = 0;
 
     // Add here all the machines init functions
-#if (TAG_TYPE == TAG_UT3_ID)
-    status = lfm_init();  //! LF Machine
-    status = ttm_init();  //! Tag Temp Machine
-    status = tsm_init();  //! Tag Status Machine
-    status = tbm_init();  //! Tag Beacon Machine
-    status = bmm_init();  //! BLE Manager Machine
+#if TAG_ID == UT3_ID
+    lfm_init();   // LF Machine
+    ttm_init();   // Tag Temp Machine
+    tsm_init();   // Tag Status Machine
+    tbm_init();   // Tag Beacon Machine
+    bmm_init();   // BLE Manager Machine
+    tum_init();   // Tag Uptime Machine
+    //btm_init();   // Battery Machine
 #endif
 
     return status;
@@ -178,13 +195,18 @@ void tag_main_run(void)
     {
         case TMM_NORMAL_MODE:
             tmm_slow_tasks_run();
-            lf_run();
+            lfm_run();
+            tag_status_run();
             tag_beacon_run();
             ble_manager_run();
             break;
 
         case TMM_MANUFACTURING_MODE:
-            // to be implemented (if needed)
+            tmm_slow_tasks_run();
+            lfm_run();
+            tag_status_run();
+            tag_beacon_run();
+            ble_manager_run();
             break;
 
         case TMM_PAUSED:
@@ -197,9 +219,11 @@ void tag_main_run(void)
             break;
     }
 
-    // Update next tick
+    // Update TMM RTCC Counter Value (next tick)
     tmm_rtcc_update();
 
+    // If BLE is not running we can skip going into main context by allowing power manager to return
+    // to low power mode at the end of ISRs.
     if (bmm_adv_running) {
         tag_sleep_on_isr_exit(false);
     } else {
@@ -212,10 +236,9 @@ void tag_main_run(void)
 #endif
 
 }
-
-/*!
- *  @brief Get Tag Main Machine current state
- *  @return @ref tmm_modes_t
+/**
+ * @brief Get Tag Main Machine current state
+ * @return @ref tmm_modes_t
  */
 tmm_modes_t tmm_get_mode(void)
 {

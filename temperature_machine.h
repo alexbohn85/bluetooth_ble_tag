@@ -12,9 +12,9 @@
 #define TEMPERATURE_MACHINE_H_
 
 #if defined(TAG_DEV_MODE_PRESENT)
-#define TTM_TIMER_PERIOD_SEC         (10)  //seconds
+#define TTM_TIMER_PERIOD_SEC_RELOAD         (10)  //seconds
 #else
-#define TTM_TIMER_PERIOD_SEC         (600)  //seconds
+#define TTM_TIMER_PERIOD_SEC_RELOAD         (600)  //seconds
 #endif
 
 //******************************************************************************
