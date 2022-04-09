@@ -44,7 +44,7 @@ typedef struct lfm_lf_beacon_t {
 //******************************************************************************
 lfm_lf_beacon_t* lfm_get_beacon_data(void);
 uint8_t lfm_get_lf_status(void);
-void lf_run(void);
+void lfm_run(void);
 uint32_t lfm_init(void);
 
 #endif /* LF_MACHINE_H_ */

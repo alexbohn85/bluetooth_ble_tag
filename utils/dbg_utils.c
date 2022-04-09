@@ -14,6 +14,7 @@
 #include "app_properties.h"
 
 #include "tag_main_machine.h"
+#include "tag_beacon_machine.h"
 #include "ble_manager_machine.h"
 #include "temperature_machine.h"
 #include "boot.h"
@@ -66,7 +67,7 @@ void dbg_print_banner(void)
                                                                                                 firmware_revision[1],
                                                                                                 firmware_revision[0]);
     printf(COLOR_B_WHITE "%35s | " COLOR_CYAN "%s\n", "Build Date", COMPILATION_TIME);
-    printf(COLOR_B_WHITE "%35s | " COLOR_CYAN "%s (0x%.2X)\n", "Tag Type", tag_tag_type_to_string(), tag_get_tag_type());
+    printf(COLOR_B_WHITE "%35s | " COLOR_CYAN "%s (0x%.2X)\n", "Tag Type", tag_tag_type_to_string(), tag_get_tag_type_id());
 
     printf(COLOR_WHITE     "\n-------------------------- Compilation Switches -------------------------\n");
 
@@ -107,13 +108,13 @@ void dbg_print_banner(void)
 #endif
     printf(COLOR_WHITE     "-------------------------------------------------------------------------\n");
 
-    printf(COLOR_B_WHITE "%35s | %s\n", "Logger", (dbg_is_log_enabled() ? COLOR_B_GREEN "On" : COLOR_B_RED "Off"));
+    printf(COLOR_B_WHITE "%35s | %s\n", "Logs", (dbg_is_log_enabled() ? COLOR_B_GREEN "On" : COLOR_B_RED "Off"));
     printf(COLOR_B_WHITE "%35s | %s\n", "Traps", (dbg_is_trap_enabled() ? COLOR_B_GREEN "On" : COLOR_B_RED "Off"));
     printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d msec\n", "TMM Tick", TMM_DEFAULT_TIMER_PERIOD_MS);
     printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d msec\n", "TTM Slow Tasks Tick", TMM_DEFAULT_SLOW_TIMER_PERIOD_MS);
-    printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d sec\n", "Beacon Rate (Fast)", BEACON_FAST_RATE_SEC);
-    printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d min\n", "Beacon Rate (Slow)", (int)(BEACON_SLOW_RATE_SEC/60));
-    printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d sec\n", "Temperature Report Rate", (int)(TTM_TIMER_PERIOD_SEC));
+    printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d sec\n", "Beacon Rate (Fast)", TBM_FAST_BEACON_RATE_SEC);
+    printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d sec\n", "Beacon Rate (Slow)", TBM_SLOW_BEACON_RATE_SEC);
+    printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d sec\n", "Temperature Report Rate", (int)(TTM_TIMER_PERIOD_SEC_RELOAD));
     printf(COLOR_B_WHITE "%35s |"COLOR_CYAN"    %s\n", "Uptime", uptime);
 
     printf(COLOR_WHITE "-------------------------------------------------------------------------\n\n");
@@ -221,6 +222,8 @@ char* dbg_log_filter_to_string(dbg_log_filters_t filter)
         case DBG_CAT_TEMP:
             return COLOR_B_WHITE "TEMPERATURE" COLOR_RST;
             break;
+        case DBG_CAT_BATTERY:
+            return COLOR_B_WHITE "BATTERY" COLOR_RST;
         default:
             return "UNKNOWN";
             break;
@@ -247,99 +250,3 @@ void dbg_log_set_filter(dbg_log_filters_t filter)
 {
     log_filter_mask = (uint32_t)filter;
 }
-
-//!-----------------------------------------------------------------------------
-//!-----------------------------------------------------------------------------
-//TODO placing this here temporarily...
-char* tag_tag_type_to_string(void)
-{
-    switch(TAG_TYPE) {
-        case TAG_UT3_ID:
-            return "UT3";
-            break;
-        default:
-            return "Undefined";
-            break;
-    }
-}
-
-uint8_t tag_get_tag_type(void)
-{
-    return TAG_TYPE;
-}
-
-uint32_t tag_get_fw_revision(void)
-{
-    return (FW_REV);
-}
-//!-----------------------------------------------------------------------------
-//!-----------------------------------------------------------------------------
-
-//TODO placing this here temporarily...
-//! @brief Called right after waking up
-void EMU_EFPEM23PresleepHook(void)
-{
-    //TODO Debugging LF
-    GPIO_PinOutClear(BOOTSEL_B2_PORT, BOOTSEL_B2_PIN);
-}
-
-//! @brief Called right after waking up
-void EMU_EFPEM23PostsleepHook(void)
-{
-    //TODO Debugging LF
-    GPIO_PinOutSet(BOOTSEL_B2_PORT, BOOTSEL_B2_PIN);
-}
-
-
-//TODO find proper place for this
-volatile bool sleep_on_isr_exit;
-void tag_sleep_on_isr_exit(bool enable)
-{
-    sleep_on_isr_exit = enable;
-    //DEBUG_LOG(DBG_CAT_SYSTEM, "tag_sleep_on_isr_exit = %s", (sleep_on_isr_exit ? "True" : "False"));
-}
-
-//! @brief Defines app behavior after exiting an isr
-//! @note This behavior needs to be dynamic during runtime to allow BLE API to run
-//! and when BLE is not in use going to sleep immediately after ISR helps to save power.
-#if 1
-sl_power_manager_on_isr_exit_t app_sleep_on_isr_exit(void)
-{
-    if (sleep_on_isr_exit) {
-        return SL_POWER_MANAGER_SLEEP;
-    } else {
-        return SL_POWER_MANAGER_WAKEUP;
-    }
-}
-#endif
-
-
-
-#if 0
-/*!
- * @brief DBG_UTILS - Unit Tests Template
- */
-void dbg_log_unit_test(void)
-{
-    //! Enable Debug log prints
-    dbg_log_enable(true);
-
-    //! Disable Debug log prints
-    dbg_log_enable(false);
-
-    //! Enable Debug log category filtering
-    dbg_log_filter_disable(false);
-
-    //! Test Category Filter 1
-    dbg_log_set_filter(DBG_CAT_BLE);
-
-    //! Test Category Filter 2
-    dbg_log_set_filter(DBG_CAT_TAG_LF);
-
-    //! Test Category Filter Enable/Disable
-    dbg_log_filter_disable(true);
-
-    //! Additional tests..
-
-}
-#endif

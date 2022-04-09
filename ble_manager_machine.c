@@ -1,24 +1,9 @@
-/*!*****************************************************************************
- * @file
- * @brief BLE Manager Machine
- *******************************************************************************
- *
- *  This module runs from Tag Main Machine ISR context.
+/*
+ * ble_manager_machine.c
  *
  *  This module is the only interface between Tag Application and BLE. Which
  *  means it should encapsulate BLE concerns. Tag Application should not make
  *  BLE API calls directly.
- *
- *  It manages BLE current state using BLE API calls and interact
- *  with (ble_api.c running on main context).
- *
- *  It provides an interface for Tag Beacon Machine to queue new messages to
- *  advertise.
- *
- *  It provides a configuration interface between Tag Application and BLE Stack.
- *  For example: start and stop BLE Stack with proper callback so Tag Application
- *  can be notified.
- *
  */
 
 #include "em_common.h"
@@ -33,6 +18,7 @@
 #include "sl_status.h"
 
 #include "dbg_utils.h"
+#include "tag_power_manager.h"
 #include "tag_sw_timer.h"
 #include "tag_defines.h"
 #include "ble_api.h"
@@ -97,11 +83,14 @@ static void ble_api_start_adv(uint8_t retransmissions, uint32_t min_interval, ui
                                       retransmissions);                         // max. num. adv. events
     app_assert_status(sc);
 
+    //sc = sl_bt_advertiser_create_set(&advertising_set_handle);
+
+    //app_assert_status(sc);
     sl_bt_advertiser_set_data( advertising_set_handle,
                                sl_bt_advertiser_advertising_data_packet,
                                adv_payload.length,
                                adv_payload.data);
-    app_assert_status(sc);
+    //app_assert_status(sc);
 
     /* Set all adv channels
     *     - <b>1:</b> Advertise on CH37
@@ -123,9 +112,12 @@ static void ble_api_start_adv(uint8_t retransmissions, uint32_t min_interval, ui
 #else
     //TODO to receive commands we need reader to connect.
     //TODO we need custom GATT
+//    sc = sl_bt_advertiser_start( advertising_set_handle,
+  //                               advertiser_user_data,
+    //                             advertiser_connectable_non_scannable);
     sc = sl_bt_advertiser_start( advertising_set_handle,
-                                 advertiser_user_data,
-                                 advertiser_connectable_non_scannable);
+                                 sl_bt_advertiser_general_discoverable,
+                                 sl_bt_advertiser_connectable_non_scannable);
 #endif
     app_assert_status(sc);
 
@@ -141,6 +133,7 @@ static void bmm_ble_api_start_adv_callback(sl_sleeptimer_timer_handle_t *handle,
 
     // Start a BLE Advertiser
     ble_api_start_adv(ADV_RETRANSMISSIONS, ADV_MIN_INTERVAL, ADV_MAX_INTERVAL);
+    //ble_api_start_adv(10, 20, 30);
 
     // While BLE is being used we change the global setting to avoid going to sleep after an ISR.
     // This means, after the ISR we go to main context to let call ble_api_fsm_run() until adv is over.
@@ -170,12 +163,12 @@ bool bmm_queue_is_full(void)
     return (((queue.rear + 1) % BLE_CIRCULAR_BUFFER_SIZE) == queue.front);
 }
 
-//! @brief Add a beacon message to the queue.
+//! @brief Add a beacon message in the queue.
 uint32_t bmm_enqueue_msg(bmm_msg_t *msg)
 {
     uint32_t status;
 
-    if( bmm_queue_is_full()) {
+    if (bmm_queue_is_full()) {
         DEBUG_LOG(DBG_CAT_BLE, "Queue is full!");
         status = -1;
     } else {
@@ -281,11 +274,11 @@ static void bmm_append_user_data(uint8_t *pdu_len, bmm_msg_t *msg)
     } else {
 
         // Append message type
-        adv_payload.data[(*pdu_len)++] = msg->msg_type;
+        adv_payload.data[(*pdu_len)++] = msg->type;
 
         // Append message data
         for (i = 0; i < (msg->length - 1); i++) {
-            adv_payload.data[(*pdu_len)++] = msg->msg_data[i];
+            adv_payload.data[(*pdu_len)++] = msg->data[i];
         }
     }
 }
@@ -329,7 +322,7 @@ static void bmm_append_man_spec_data(uint8_t *pdu_len)
     man_spec_data_len++;
     adv_payload.data[(*pdu_len)++] = UUID_GUARD_H;
     man_spec_data_len++;
-    adv_payload.data[(*pdu_len)++] = TAG_TYPE;                                  // BLE Tag Type ID
+    adv_payload.data[(*pdu_len)++] = TAG_ID;                                    // BLE Tag Type ID
     man_spec_data_len++;
 
     // Now go thru the msg queue and aggregate messages until PDU buffer is full.
@@ -363,7 +356,7 @@ static uint32_t bmm_process_msg_events(void)
 #endif
 
         // Append Complete Local Name
-        bmm_append_adv_complete_local_name(&pdu_len);
+        //bmm_append_adv_complete_local_name(&pdu_len);
 
         // Append Manufacturer Specific Data
         bmm_append_man_spec_data(&pdu_len);

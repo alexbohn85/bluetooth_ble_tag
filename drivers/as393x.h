@@ -451,5 +451,21 @@ uint32_t as39_cmd_preset_default(void);
  */
 const char* as39_get_device_name(void);
 
+/**
+ * @brief Return AS393x Gain Reduction setting
+ * @details
+ *     - <b>0:</b>  0 dB
+ *     - <b>1:</b>  n.a
+ *     - <b>2:</b> -4 dB
+ *     - <b>3:</b> -8 dB
+ *     - <b>4:</b> -12 dB
+ *     - <b>5:</b> -16 dB
+ *     - <b>6:</b> -20 dB
+ *     - <b>7:</b> -24 dB
+ *
+ * @return uint8_t
+ */
+uint8_t as39_get_attenuation_set(void);
+
 #endif /* AS393X_H_ */
 

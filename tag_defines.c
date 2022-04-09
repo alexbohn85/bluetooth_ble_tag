@@ -1,17 +1,12 @@
 /*
  * tag_defines.c
  *
- * Add description here
+ * BLE Tag platform definitions, compilation defines.
  *
  */
 
-#include <template.h>
-#include "em_common.h"
-#include "app_assert.h"
-#include "dbg_utils.h"
 #include "stdio.h"
-#include "stdbool.h"
-
+#include "tag_defines.h"
 
 //******************************************************************************
 // Defines
@@ -24,10 +19,8 @@
 //******************************************************************************
 // Global variables
 //******************************************************************************
-#if (TAG_TYPE == TAG_UT3_ID)
+#if TAG_ID == UT3_ID
 const char tag_name[] = "UT3";
-#elif (TAG_TYPE == TAG_PT3_ID)
-const char tag_name[] = "PT3";
 #endif
 
 //******************************************************************************
@@ -37,7 +30,19 @@ const char tag_name[] = "PT3";
 //******************************************************************************
 // Non Static functions
 //******************************************************************************
+char* tag_tag_type_to_string(void)
+{
+    switch(TAG_ID) {
+        case UT3_ID:
+            return "UT3";
+            break;
+        default:
+            return "Undefined";
+            break;
+    }
+}
 
-/*!  @brief
- *   @details
- ******************************************************************************/
+uint8_t tag_get_tag_type_id(void)
+{
+    return TAG_ID;
+}

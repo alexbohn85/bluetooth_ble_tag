@@ -17,14 +17,11 @@
 #include "temperature_machine.h"
 #include "tag_beacon_machine.h"
 
-//TODO only for NVM tests
-#include "nvm.h"
 
 //******************************************************************************
 // Defines
 //******************************************************************************
 #define TEMP_SENSOR_PRECISION        (100)
-
 
 //******************************************************************************
 // Data types
@@ -45,10 +42,11 @@ static void ttm_read_temperature(void)
     volatile float temp_celsius = EMU_TemperatureGet();
 
 #if defined(TAG_LOG_PRESENT)
-    //!TODO Remove this (only for debug)
-    int int_part = (int)temp_celsius;
-    int dec_part = ((int)(temp_celsius * TEMP_SENSOR_PRECISION) % TEMP_SENSOR_PRECISION);
-    DEBUG_LOG(DBG_CAT_TEMP,"Temperature: %d.%d C", int_part, dec_part);
+    // For debug only
+    uint8_t int_part = (uint8_t)temp_celsius;
+    float frac = temp_celsius - int_part;
+    uint16_t dec_part = ((uint16_t)(frac * TEMP_SENSOR_PRECISION));
+    DEBUG_LOG(DBG_CAT_TEMP,"Temperature: %1d.%02d C", int_part, dec_part);
 #endif
 
     if (temp_celsius < INT8_MIN) {
@@ -57,47 +55,51 @@ static void ttm_read_temperature(void)
         temp_celsius = INT8_MAX;
     }
 
-    //! Rounding to signed char
-    ttm_tag_current_temperature = (((int8_t) (temp_celsius + 0.5 - INT8_MIN)) + INT8_MIN);
+    // Rounding to signed char
+    ttm_tag_current_temperature = (((int8_t)(temp_celsius + 0.5 - INT8_MIN)) + INT8_MIN);
 }
 
 //******************************************************************************
 // Non-Static Functions
 //******************************************************************************
-//! @brief Get current sensor temperature value
-//! @return Last temperature sensor value
+/**
+ * @brief Return latest sensor temperature read value
+ * @return int8_t - @ref ttm_tag_current_temperature
+ */
 int8_t ttm_get_current_temperature(void)
 {
     return ttm_tag_current_temperature;
 }
 
-//! @brief Tag Temperature Machine
-//! @details Reports Temperature read events to Tag Beacon Machine
+/**
+ * @brief Tag Temperature Machine
+ * @details Reports Temperature read events to Tag Beacon Machine
+ */
 void temperature_run(void)
 {
-    //! Tick Temperature Report Timer
+    // Tick Temperature Report Timer
     tag_sw_timer_tick(&ttm_report_timer);
 
-    //! Measure SoC temperature every TTM_TIMER_PERIOD_SEC seconds and
-    //! Send Tag Temperature Beacon event to Tag Beacon Machine.
+    // Measure SoC temperature every TTM_TIMER_PERIOD_SEC seconds and
+    // Send Tag Temperature Beacon event to Tag Beacon Machine.
     if (tag_sw_timer_is_expired(&ttm_report_timer)) {
 
-        //! Read current temperature.
+        // Read current temperature.
         ttm_read_temperature();
 
-        //! Send an Async Temperature Beacon event to Tag Beacon Machine
+        // Send an Async Temperature Beacon event to Tag Beacon Machine
         tbm_set_event(TBM_TEMPERATURE_EVT, true);
 
-        //! Reload TTM Report Timer
-        tag_sw_timer_reload(&ttm_report_timer, TTM_TIMER_PERIOD_SEC);
+        // Reload TTM Report Timer
+        tag_sw_timer_reload(&ttm_report_timer, TTM_TIMER_PERIOD_SEC_RELOAD);
 
     }
 }
 
 uint32_t ttm_init(void)
 {
-    //! Load internal timer for temperature sampling and temperature report interval
-    tag_sw_timer_reload(&ttm_report_timer, TTM_TIMER_PERIOD_SEC);
+    // Load internal timer for temperature sampling and temperature report interval
+    tag_sw_timer_reload(&ttm_report_timer, TTM_TIMER_PERIOD_SEC_RELOAD);
     ttm_read_temperature();
     return 0;
 }

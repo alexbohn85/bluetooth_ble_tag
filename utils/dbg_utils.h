@@ -63,6 +63,7 @@ typedef enum dbg_log_filters_t {
     DBG_CAT_WARNING =       (1 << 5),
     DBG_CAT_TEMP =          (1 << 6),
     DBG_CAT_SYSTEM =        (1 << 7),
+    DBG_CAT_BATTERY =       (1 << 8),
     DBG_CAT_ALL_DISABLED = 0,
     DBG_CAT_ALL_ENABLED = -1
 } dbg_log_filters_t;
@@ -74,7 +75,6 @@ extern volatile bool log_enable;
 extern volatile bool trap_enable;
 extern volatile bool log_filter_disabled;
 extern volatile dbg_log_filters_t log_filter_mask;
-extern volatile bool sleep_on_isr_exit;
 
 //******************************************************************************
 // Macros
@@ -136,31 +136,4 @@ void dbg_log_deinit(void);
 void dbg_print_banner(void);
 void dbg_print_git_info(void);
 
-//!TODO Temporarily here
-char* tag_tag_type_to_string(void);
-uint8_t tag_get_tag_type(void);
-uint32_t tag_get_fw_revision(void);
-
-//!TODO Temporarily here
-void EMU_EFPEM23PresleepHook(void);
-void EMU_EFPEM23PostsleepHook(void);
-void tag_sleep_on_isr_exit(bool enable);
-
 #endif /* DBG_UTILS_H_ */
-
-
-// Backups
-/*
-#define DEBUG_LOGC(color, log_filter, format, args...)                                                         \
-    do {                                                                                                       \
-        CORE_DECLARE_IRQ_STATE;                                                                                \
-        if(!dbg_log_enable) {                                                                                  \
-            break;                                                                                             \
-        }                                                                                                      \
-        if (((log_filter & log_filter_mask) | log_filter_enable)) {                                            \
-            CORE_ENTER_ATOMIC();                                                                               \
-            printf(color "\n[DEBUG_LOG] (%s:%u) " format COLOR_RST, __FILE__, __LINE__, ##args);               \
-            CORE_EXIT_ATOMIC();                                                                                \
-        }                                                                                                      \
-    } while(0)                                                                                                 \
-*/

@@ -25,12 +25,6 @@
 //******************************************************************************
 #define TBM_MAX_EVENTS                        (31)
 
-#define TBM_FAST_BEACON_RATE_SEC              (12)                              //! When tag is in certain states (e.g Staying In Field, Tamper Alert, Man Down, etc)
-#define TBM_FAST_BEACON_RATE_RELOAD           ((TBM_FAST_BEACON_RATE_SEC * 1000) / TMM_DEFAULT_TIMER_PERIOD_MS)
-
-#define TBM_DEFAULT_BEACON_RATE_SEC           (600)                             //! Default is 10 minutes
-#define TBM_DEFAULT_BEACON_RATE_RELOAD        ((TBM_DEFAULT_BEACON_RATE_SEC * 1000) / TMM_DEFAULT_TIMER_PERIOD_MS)
-
 //******************************************************************************
 // Data types
 //******************************************************************************
@@ -43,17 +37,60 @@ typedef struct tbm_status_t {
 // Global variables
 //******************************************************************************
 static tag_sw_timer_t tbm_beacon_timer;
-//TODO this variable is DEPRECATED
-static volatile tbm_beacon_events_t event_flags;
 static volatile tbm_status_t tbm_status;
 
 //******************************************************************************
 // Static functions
 //******************************************************************************
-//! @brief Get event flag
-//! @param value between 0 to TBM_MAX_EVENTS
-//! @return 0 if event is not pending, or the event itself otherwise.
-static tbm_beacon_events_t tbm_get_event(uint8_t bit)
+char* tbm_get_event_name(tbm_beacon_events_t event)
+{
+    switch(event) {
+
+        case TBM_TAG_STATUS_EVT:
+            return "TBM_TAG_STATUS_EVT";
+
+        case TBM_BUTTON_EVT:
+            return "TBM_BUTTON_EVT";
+
+        case TBM_LF_EVT:
+            return "TBM_LF_EVT";
+
+        case TBM_FALL_DETECT_EVT:
+            return "TBM_FALL_DETECT_EVT";
+
+        case TBM_MOTION_EVT:
+            return "TBM_MOTION_EVT";
+
+        case TBM_FIRMWARE_REV_EVT:
+            return "TBM_FIRMWARE_REV_EVT";
+
+        case TBM_EXT_STATUS_EVT:
+            return "TBM_EXT_STATUS_EVT";
+
+        case TBM_TAMPER_EVT:
+            return "TBM_TAMPER_EVT";
+
+        case TBM_TEMPERATURE_EVT:
+            return "TBM_TEMPERATURE_EVT";
+
+        case TBM_UPTIME_EVT:
+            return "TBM_UPTIME_EVT";
+
+        case TBM_CMD_ACK_EVT:
+            return "TBM_CMD_ACK_EVT";
+
+        default:
+            return "Unknown Tag Beacon Type";
+            break;
+    }
+}
+
+/**
+ * @brief Get sync beacon events
+ * @param bit (event bit)
+ * @return 0 if event is not pending, return event bit itself otherwise.
+ */
+static tbm_beacon_events_t tbm_get_sync_event(uint8_t bit)
 {
     return (tbm_status.events & (1 << bit));
 }
@@ -69,6 +106,93 @@ static void tbm_clear_event(tbm_beacon_events_t event)
     tbm_status.event_async_flag &= ~(event);
 }
 
+/**
+ * @brief Enqueue message and clear event
+ * @param bmm_msg_t*
+ * @param tbm_beacon_events_t
+ */
+static uint32_t tbm_dispatch_msg(bmm_msg_t* msg, tbm_beacon_events_t event)
+{
+    uint32_t status;
+
+    status = bmm_enqueue_msg(msg);
+
+    if (status == 0) {
+        // Message was enqueued, we can now clear this beacon event.
+        tbm_clear_event(event);
+        DEBUG_LOG(DBG_CAT_TAG_BEACON, COLOR_BG_BLUE COLOR_B_CYAN "%s" COLOR_RST " beacon message was queued...", tbm_get_event_name(event));
+    } else {
+        status = 1;
+    }
+
+    return status;
+}
+
+static void tbm_send_firmware_rev_beacon(void)
+{
+    uint32_t status;
+    volatile uint8_t i = 0;
+
+    if (!bmm_queue_is_full()) {
+        tsm_tag_ext_status_beacon_t *data = tsm_get_tag_ext_status_beacon_data();
+        bmm_msg_t msg;
+        msg.type = BLE_MSG_TAG_EXT_STATUS;
+        msg.data[i++] = data->fw_rev[0];  /* most significant digit of FW rev format */
+        msg.data[i++] = data->fw_rev[1];
+        msg.data[i++] = data->fw_rev[2];
+        msg.data[i++] = data->fw_rev[3];
+        msg.length = i + 1;
+
+        // Send msg to BLE Manager queue
+        status = tbm_dispatch_msg(&msg, TBM_EXT_STATUS_EVT);
+
+/*
+        status = bmm_enqueue_msg(&msg);
+        if (status == 0) {
+            //Message is queued, we can now clear this event.
+            tbm_clear_event(TBM_EXT_STATUS_EVT);
+            DEBUG_LOG(DBG_CAT_TAG_BEACON, COLOR_BG_BLUE COLOR_B_CYAN "Tag Extended Status Beacon" COLOR_RST " was queued...");
+        } else {
+            DEBUG_LOG(DBG_CAT_TAG_BEACON, "BMM queue returned an error!");
+        }
+*/
+    } else {
+        DEBUG_LOG(DBG_CAT_TAG_BEACON, "BMM message queue is full");
+    }
+}
+
+static void tbm_send_tag_ext_status_beacon(void)
+{
+    uint32_t status;
+    volatile uint8_t i = 0;
+
+    if (!bmm_queue_is_full()) {
+        tsm_tag_ext_status_beacon_t *data = tsm_get_tag_ext_status_beacon_data();
+        bmm_msg_t msg;
+        msg.type = BLE_MSG_TAG_EXT_STATUS;
+        msg.data[i++] = data->ext_status.byte;
+        msg.data[i++] = data->fw_rev[0];
+        msg.data[i++] = data->fw_rev[1];
+        msg.data[i++] = data->fw_rev[2];
+        msg.data[i++] = data->fw_rev[3];
+        msg.length = i + 1;
+
+        status = bmm_enqueue_msg(&msg);
+
+        if (status == 0) {
+            // Message is queued, we can now clear this event.
+            tbm_clear_event(TBM_EXT_STATUS_EVT);
+            DEBUG_LOG(DBG_CAT_TAG_BEACON, COLOR_BG_BLUE COLOR_B_CYAN "Tag Extended Status Beacon" COLOR_RST " was queued...");
+        } else {
+            DEBUG_LOG(DBG_CAT_TAG_BEACON, "BMM queue returned an error!");
+        }
+
+    } else {
+        DEBUG_LOG(DBG_CAT_TAG_BEACON, "BMM message queue is full");
+    }
+
+}
+
 static void tbm_send_tag_status_beacon(void)
 {
     uint32_t status;
@@ -77,24 +201,24 @@ static void tbm_send_tag_status_beacon(void)
     if (!bmm_queue_is_full()) {
         tsm_tag_status_beacon_t *data = tsm_get_tag_status_beacon_data();
         bmm_msg_t msg;
-        msg.msg_type = BLE_MSG_TAG_STATUS;
-        msg.msg_data[i++] = data->fw_rev[0];
-        msg.msg_data[i++] = data->fw_rev[1];
-        msg.msg_data[i++] = data->fw_rev[2];
-        msg.msg_data[i++] = data->fw_rev[3];
-        msg.msg_data[i++] = data->tag_status.byte[1];
-        msg.msg_data[i++] = data->tag_status.byte[0];
+        msg.type = BLE_MSG_TAG_STATUS;
+        msg.data[i++] = data->status.byte;
         msg.length = i + 1;
 
-        status = bmm_enqueue_msg(&msg);
+        tbm_dispatch_msg(&msg, (TBM_MOTION_EVT | TBM_TAMPER_EVT));
 
+/*
+        status = bmm_enqueue_msg(&msg);
         if (status == 0) {
-            //! Message is queued, we can now clear this event.
-            tbm_clear_event(TBM_STATUS_EVT);
-            DEBUG_LOG(DBG_CAT_TAG_BEACON, COLOR_BG_BLUE COLOR_B_CYAN "Tag Status Beacon" COLOR_RST " was queued...");
+            tbm_clear_event(TBM_MOTION_EVT);
+            tbm_clear_event(TBM_TAMPER_EVT);
+            DEBUG_LOG(DBG_CAT_TAG_BEACON, COLOR_BG_BLUE COLOR_B_CYAN "Tag Beacon" COLOR_RST " was queued...");
         } else {
             DEBUG_LOG(DBG_CAT_TAG_BEACON, "BMM queue returned an error!");
         }
+*/
+    } else {
+        DEBUG_LOG(DBG_CAT_TAG_BEACON, "BMM message queue is full");
     }
 }
 
@@ -106,22 +230,24 @@ static void tbm_send_lf_beacon(void)
     if (!bmm_queue_is_full()) {
         lfm_lf_beacon_t *data = lfm_get_beacon_data();
         bmm_msg_t msg;
-        msg.msg_type = BLE_MSG_LF;
-        msg.msg_data[i++] = data->lf_event;
-        msg.msg_data[i++] = (data->lf_data.id >> 8);
-        msg.msg_data[i++] = (data->lf_data.id);
-        msg.msg_data[i++] = data->lf_data.command;
+        msg.type = BLE_MSG_LF_FIELD;
+        msg.data[i++] = data->lf_event;
+        msg.data[i++] = (data->lf_data.id >> 8);
+        msg.data[i++] = (data->lf_data.id);
+        msg.data[i++] = data->lf_data.command;
         msg.length = i + 1;
 
         status = bmm_enqueue_msg(&msg);
 
         if (status == 0) {
-            //! Message is queued, we can now clear this event.
+            // Message is queued, we can now clear this event.
             tbm_clear_event(TBM_LF_EVT);
             DEBUG_LOG(DBG_CAT_TAG_BEACON, COLOR_BG_BLUE COLOR_B_CYAN "LF Beacon" COLOR_RST " was queued...");
         } else {
             DEBUG_LOG(DBG_CAT_TAG_BEACON, "BMM queue returned an error!");
         }
+    } else {
+        DEBUG_LOG(DBG_CAT_TAG_BEACON, "BMM message queue is full");
     }
 }
 
@@ -131,46 +257,23 @@ static void tbm_send_temperature_beacon(void)
     volatile uint8_t i = 0;
 
     if (!bmm_queue_is_full()) {
+        int8_t temperature = ttm_get_current_temperature();
         bmm_msg_t msg;
-        msg.msg_type = BLE_MSG_TEMPERATURE;
-        msg.msg_data[i++] = (uint8_t)ttm_get_current_temperature();
+        msg.type = BLE_MSG_TEMPERATURE;
+        msg.data[i++] = (uint8_t)temperature;
         msg.length = i + 1;
 
         status = bmm_enqueue_msg(&msg);
 
         if (status == 0) {
-            //! Message is queued, we can now clear this event.
+            // Message is queued, we can now clear this event.
             tbm_clear_event(TBM_TEMPERATURE_EVT);
             DEBUG_LOG(DBG_CAT_TAG_BEACON, COLOR_BG_BLUE COLOR_B_CYAN "Tag Temperature Beacon" COLOR_RST " was queued...");
         } else {
             DEBUG_LOG(DBG_CAT_TAG_BEACON, "BMM queue returned an error...");
         }
     } else {
-        DEBUG_LOG(DBG_CAT_TAG_BEACON, "Error! BMM queue is full...");
-    }
-
-}
-
-static void tbm_send_simple_beacon(void)
-{
-    uint32_t status;
-
-    if (!bmm_queue_is_full()) {
-        bmm_msg_t msg = {
-           .length = 2,
-           .msg_data = {0},
-           .msg_type = BLE_MSG_SIMPLE_BEACON
-        };
-
-        status = bmm_enqueue_msg(&msg);
-
-        if (status == 0) {
-            DEBUG_LOG(DBG_CAT_TAG_BEACON, COLOR_BG_BLUE COLOR_B_CYAN "Simple beacon" COLOR_RST " was queued...");
-        } else {
-            DEBUG_LOG(DBG_CAT_TAG_BEACON, "BMM queue returned an error...");
-        }
-    } else {
-        DEBUG_LOG(DBG_CAT_TAG_BEACON, "Error! BMM queue is full...");
+        DEBUG_LOG(DBG_CAT_TAG_BEACON, "BMM message queue is full");
     }
 
 }
@@ -181,19 +284,15 @@ static void tbm_send_cmd_ack_beacon()
     //to be implemented
 }
 
-static void tbm_send_battery_beacon()
+static void tbm_send_fall_detection_beacon()
 {
     //to be implemented
 }
 
-static void tbm_send_tag_status_beacon()
+static void tbm_send_button_beacon()
 {
     //to be implemented
 }
-
-//static void tbm_send_mandown_beacon();
-//static void tbm_send_button_beacon();
-//static void tbm_send_motion_beacon();
 #endif
 
 //! @brief Decode pending events, Prioritize messages, Sends messages to BLE Manager Queue
@@ -201,6 +300,7 @@ static void tbm_decode_event(tbm_beacon_events_t event)
 {
     if (event != 0) {
         switch (event) {
+
             case TBM_LF_EVT:
                 tbm_send_lf_beacon();
                 break;
@@ -209,29 +309,34 @@ static void tbm_decode_event(tbm_beacon_events_t event)
                 tbm_send_temperature_beacon();
                 break;
 
-            case TBM_STATUS_EVT:
-                tbm_send_tag_status_beacon();
+            case TBM_FIRMWARE_REV_EVT:
+                tbm_send_firmware_rev_beacon();
                 break;
 
-            case TBM_BATTERY_EVT:
-                //tbm_send_battery_beacon();
+            case TBM_EXT_STATUS_EVT:
+                tbm_send_tag_ext_status_beacon();
                 break;
 
             case TBM_CMD_ACK_EVT:
+                //TODO to be implemented
                 //tbm_send_cmd_ack_beacon();
                 break;
 
-#if 0 //! Not implemented for UT3
-            case TBM_MAN_DOWN_EVT:
-                //tbm_send_mandown_beacon();
+            case TBM_MOTION_EVT:
+                // This event is handled in "tbm_send_tag_status_beacon"
+                break;
+
+#if 0 // Feature not supported on UT3
+            case TBM_TAMPER_EVT:
+                // This event is handled in "tbm_send_tag_status_beacon"
+                break;
+
+            case TBM_FALL_DETECT_EVT:
+                tbm_send_fall_detection_beacon();
                 break;
 
             case TBM_BUTTON_EVT:
-                //tbm_send_button_beacon();
-                break;
-
-            case TBM_MOTION_EVT:
-                //tbm_send_motion_beacon();
+                tbm_send_button_beacon();
                 break;
 #endif
             default:
@@ -244,29 +349,15 @@ static void tbm_decode_event(tbm_beacon_events_t event)
 //******************************************************************************
 // Non Static functions
 //******************************************************************************
-
-//! @brief Sets an event flag for Tag Beacon Machine
-//! @details Sets a beacon event flag (we are not expecting queuing for beacon events)
-//! So if a certain event is triggered multiple times between Tag Beacon Machine
-//! Process period, only 1 event is registered. Each machine is supposed to
-//! implement their own queues (if necessary).
-//!
-//! There might be certain types of events that needs to queue so we do not
-//! miss them. Due to the Tag Main Machine period duration some events may
-//! need to be handled faster or implement queues. Luckily for tag applications
-//! we do not have many of these types of events. Maybe one example would be button
-//! press intervals. If you press push button 2x between a Tag Main Process
-//! tick it wont register 2 events but one. This is actually desirable to
-//! avoid users from abusing the resources. We need to make sure to send
-//! the button beacon event but the level of responsiveness VS battery life
-//! needs to be taken into account.
+/**
+ * @brief Sets an event flag for Tag Beacon Machine
+ * @param event
+ * @param is_async
+ */
 void tbm_set_event(tbm_beacon_events_t event, bool is_async)
 {
-    //! TODO Debug to check if there is any change this approach could drop async messages.
-    //! In theory all async messages are critical and need to be transmitted.
-    //! Async messages are less critical, they usually report current states while async report transitions.
-
     tbm_status.events |= event;
+
     if (is_async) {
         tbm_status.event_async_flag |= event;
     } else {
@@ -274,21 +365,32 @@ void tbm_set_event(tbm_beacon_events_t event, bool is_async)
     }
 }
 
-//!  @brief Tag Beacon Machine
+/**
+ * @brief Tag Beacon Machine
+ * @details
+ *     - Check for sync and async Tag Beacon events sent by other modules.
+ *     - Get beacon data, build beacon messages and enqueue so BLE Manager can transmit them.
+ *     - Controls beacon rate for synchronous Tag Beacon events based on Tag
+ *       current status. e.g When Staying in Field tag may use TBM_FAST_BEACON_RATE_SEC
+ *       beacon rate rather than TBM_SLOW_BEACON_RATE_SEC beacon rate.
+ */
 void tag_beacon_run(void)
 {
-    //! we only process this machine if BLE Manager Transmission Queue is empty.
-    //! otherwise, we just wait another tick to process more messages. Normally the
-    //! queue will be emptied on the same tick but there might be cases we may
-    //! accumulate multiple messages in BLE Manager queue that exceed ADV_PDU max size.
-    //! In that case BLE Manager will require more ticks to transmit all the messages.
 
     if (bmm_queue_is_empty()) {
         int8_t bit;
+
+        // Tick Tag Beacon Machine (Synchronous Beacon Rate)
         tag_sw_timer_tick(&tbm_beacon_timer);
 
-        //! First check for beacon events with asynchronous flag, they are higher priority
-        //! than synchronous beacons and must be transmitted first.
+        // First add Tag Beacon Message (this message is present on every single transmission)
+        if ((tbm_status.event_async_flag != 0) || ( tag_sw_timer_is_expired(&tbm_beacon_timer))) {
+            // This message contains status bits and also async event flags like Motion and Tamper
+            // So it is sort of special message that does not really falls in async or sync type.
+            tbm_send_tag_status_beacon();
+        }
+
+        // Then check for async beacon events
         if (tbm_status.event_async_flag != 0) {
             for (bit = 0; bit < TBM_MAX_EVENTS; bit++) {
                 tbm_beacon_events_t event = tbm_get_async_event(bit);
@@ -298,30 +400,16 @@ void tag_beacon_run(void)
             }
         }
 
-        //! Then check for beacons events that are synchronized to Tag Beacon Machine timer.
+        // Then check if it is time to send synchronous beacons
         if (tag_sw_timer_is_expired(&tbm_beacon_timer)) {
-            //! Check synchronous pending beacon event
             if (tbm_status.events != 0) {
                 for (bit = 0; bit < TBM_MAX_EVENTS; bit++) {
-                    tbm_beacon_events_t event = tbm_get_event(bit);
+                    tbm_beacon_events_t event = tbm_get_sync_event(bit);
                     if (event) {
                         tbm_decode_event(event);
                     }
                 }
-            } else {
-                //! If none of the modules had beacon event to send then we just send a simple plain beacon message
-                tbm_send_simple_beacon();
             }
-            //! And reload Tag Beacon Machine timer based on module status.
-            //! Some modules can change the base beacon rate interval of the synchronous
-            //! beacons. For example when "Staying in Field" tag beacons every 12 seconds
-            //! and when Tag is not "Staying in field" then the base beacon rate changes
-            //! to 10 minutes. Another example would be "Tag in Motion", we usually beacon
-            //! every 12 seconds while in that state. If not than we can return to 10 minutes
-            //! beacon rate.
-
-            //! So, here we can check for module status and decide what is the beacon rate
-            //! we want to keep for the synchronous beacons events.
             /*
             if (lfm_get_lf_status() && LFM_STAYING_IN_FIELD_FLAG) {
                 //! 12 seconds for next synchronous beacon event.

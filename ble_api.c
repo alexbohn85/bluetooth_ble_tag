@@ -89,7 +89,6 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
 
     switch (SL_BT_MSG_ID(evt->header)) {
         default:
-            //bmm_adv_running = false;
             break;
 
         case sl_bt_evt_system_boot_id:
@@ -98,7 +97,6 @@ void sl_bt_on_event(sl_bt_msg_t *evt)
 
         case sl_bt_evt_advertiser_timeout_id:
             bmm_adv_running = false;
-            //tag_sleep_on_isr_exit(true);
             DEBUG_LOG(DBG_CAT_BLE, "Stop BLE beacon advertising...");
             break;
 

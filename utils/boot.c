@@ -16,6 +16,7 @@
 
 #include "dbg_utils.h"
 #include "tag_defines.h"
+#include "tag_gpio_mapping.h"
 #include "boot.h"
 
 
