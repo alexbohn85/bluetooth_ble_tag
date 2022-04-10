@@ -23,8 +23,11 @@
 //******************************************************************************
 // Interface
 //******************************************************************************
+void tum_print_timestamp(void);
+void tum_get_full_uptime_string(char *buf, size_t size);
 uint16_t tum_get_beacon_data(void);
 void tag_uptime_run(void);
 uint32_t tum_init(void);
+void tum_preinit(void);
 
 #endif /* TAG_UPTIME_MACHINE_H_ */

@@ -80,6 +80,9 @@ void tag_power_settings(void)
 //------------------------------------------------------------------------------
 void tag_init(void)
 {
+    // Reset uptime variable (only when Power-On Reset)
+    tum_preinit();
+
     // Initialize UART (used by dbg_utils and cli)
     dbg_log_init();
     dbg_log_enable(true);
@@ -99,9 +102,6 @@ void tag_init(void)
 
     // Initialize RTCC (used by Tag Main Machine and LF Decoder)
     rtcc_init();
-
-    // Initialize ADC (used by Battery Machine)
-    //adc_init();
 
     // Initialize LF Decoder
     lf_decoder_init();
