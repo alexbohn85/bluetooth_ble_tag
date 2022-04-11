@@ -67,6 +67,21 @@
 #define SL_SPIDRV_AS39_SPI_PERIPHERAL            USART0
 #define SL_SPIDRV_AS39_SPI_PERIPHERAL_NO         0
 
+// USART0 TX on PC02
+#define SL_SPIDRV_AS39_SPI_TX_PORT               gpioPortC
+#define SL_SPIDRV_AS39_SPI_TX_PIN                2
+
+// USART0 RX on PC01
+#define SL_SPIDRV_AS39_SPI_RX_PORT               gpioPortC
+#define SL_SPIDRV_AS39_SPI_RX_PIN                1
+
+// USART0 CLK on PC03
+#define SL_SPIDRV_AS39_SPI_CLK_PORT              gpioPortC
+#define SL_SPIDRV_AS39_SPI_CLK_PIN               3
+
+// USART0 CS on PC04
+#define SL_SPIDRV_AS39_SPI_CS_PORT               gpioPortC
+#define SL_SPIDRV_AS39_SPI_CS_PIN                4
 // [USART_SL_SPIDRV_AS39_SPI]$
 // <<< sl:end pin_tool >>>
 

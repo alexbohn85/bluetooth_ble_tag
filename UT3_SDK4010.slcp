@@ -30,8 +30,8 @@ component:
 - {id: bluetooth_feature_sm}
 - {id: emlib_wdog}
 - {id: bluetooth_feature_system}
-- {id: device_init_lfxo}
 - {id: gatt_configuration}
+- {id: device_init_lfxo}
 - {id: sl_memory}
 - {id: bluetooth_feature_scanner}
 - {id: bluetooth_stack}
