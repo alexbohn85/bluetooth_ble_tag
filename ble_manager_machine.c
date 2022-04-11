@@ -356,7 +356,7 @@ static uint32_t bmm_process_msg_events(void)
 #endif
 
         // Append Complete Local Name
-        //bmm_append_adv_complete_local_name(&pdu_len);
+        bmm_append_adv_complete_local_name(&pdu_len);
 
         // Append Manufacturer Specific Data
         bmm_append_man_spec_data(&pdu_len);
