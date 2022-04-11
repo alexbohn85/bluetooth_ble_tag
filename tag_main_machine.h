@@ -40,34 +40,19 @@
 //******************************************************************************
 //! @brief Tag Main Machine op. modes
 typedef enum tmm_modes_t {
-    TMM_NORMAL_MODE,
-    TMM_MANUFACTURING_MODE,
+    TMM_RUNNING,
     TMM_PAUSED,
 } tmm_modes_t;
 
 //******************************************************************************
 // Interface
 //******************************************************************************
-void tag_main_run(void);
-
+void tag_main_machine_isr(void);
 void tmm_pause(void);
-
 void tmm_resume(void);
-
-//! @brief Return TMM current mode
 tmm_modes_t tmm_get_mode(void);
-
-//! @brief Start Tag Main Machine in Manufacturing Mode State
-void tmm_start_manufacturing_mode(void);
-
- //! @brief Start Tag Main Machine in Normal Mode State
-void tmm_start_normal_mode(void);
-
-//! @brief Get Tag Main Machine main tick period
+void tmm_start(tmm_modes_t mode);
 uint32_t tmm_get_tick_period_ms(void);
-
-//! @brief Get Tag Main Machine slow task tick period
 uint32_t tmm_get_slow_tick_period(void);
-
 
 #endif /* TAG_MAIN_MACHINE_H_ */

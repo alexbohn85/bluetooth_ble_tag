@@ -55,7 +55,7 @@ void RTCC_IRQHandler(void)
 #if 1
     // Capture/Compare 1 handler - Tag Main Machine SysTick
     if (irq_flag & RTCC_IF_CC1) {
-        tag_main_run();
+        tag_main_machine_isr();
     }
 #endif
 

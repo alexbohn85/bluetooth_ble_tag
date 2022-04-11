@@ -18,7 +18,7 @@
 #define BOOT_MANUFACTURING_TEST      (0b01)
 #define BOOT_UNUSED                  (0b00)
 #define BOOT_ESCAPE_HATCH            (0b10)
-#define BOOT_NORMAL                  (0b11)
+#define BOOT_DEFAULT                 (0b11)
 
 uint8_t boot_get_mode(void);
 void boot_init(void);
