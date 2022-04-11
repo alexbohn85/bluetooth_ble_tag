@@ -34,38 +34,18 @@ void dbg_print_git_info(void)
     printf("\n%s\n%s\n%s", GIT_LINE_1, GIT_LINE_2, GIT_URL);
 }
 
-void uptime_to_string(char *buf, size_t size)
-{
-#if (SL_SLEEPTIMER_WALLCLOCK_CONFIG == 1)
-    sl_sleeptimer_date_t date = {0};
-    sl_sleeptimer_timestamp_t timestamp = sl_sleeptimer_get_time();
-    sl_sleeptimer_convert_time_to_date(timestamp, 0, &date);
-    snprintf(buf, size, "%d days %.2d:%.2d:%.2d ", (date.day_of_year - 1), date.hour, date.min, date.sec);
-#endif
-}
-
-void print_timestamp(void)
-{
-#if (SL_SLEEPTIMER_WALLCLOCK_CONFIG == 1)
-    sl_sleeptimer_date_t date = {0};
-    sl_sleeptimer_timestamp_t timestamp = sl_sleeptimer_get_time();
-    sl_sleeptimer_convert_time_to_date(timestamp, 0, &date);
-    printf("\n%.2d:%.2d:%.2d ", date.hour, date.min, date.sec);
-#endif
-}
-
 void dbg_print_banner(void)
 {
     char uptime[80];
-    uptime_to_string(uptime, sizeof(uptime));
+    tum_get_full_uptime_string(uptime, sizeof(uptime));
 
     printf(COLOR_WHITE "\n\n=========================================================================" COLOR_RST "\n");
     printf(COLOR_B_YELLOW  "                   BLE Tag Firmware Initialization                       " COLOR_RST "\n");
     printf(COLOR_WHITE     "=========================================================================\n");
-    printf(COLOR_B_WHITE "%35s | " COLOR_CYAN "%.1d.%.1d.%.1d.%.1d \n", "Tag Firmware Version", firmware_revision[3],
-                                                                                                firmware_revision[2],
+    printf(COLOR_B_WHITE "%35s | " COLOR_CYAN "%.1d.%.1d.%.1d.%.1d \n", "Tag Firmware Version", firmware_revision[0],
                                                                                                 firmware_revision[1],
-                                                                                                firmware_revision[0]);
+                                                                                                firmware_revision[2],
+                                                                                                firmware_revision[3]);
     printf(COLOR_B_WHITE "%35s | " COLOR_CYAN "%s\n", "Build Date", COMPILATION_TIME);
     printf(COLOR_B_WHITE "%35s | " COLOR_CYAN "%s (0x%.2X)\n", "Tag Type", tag_tag_type_to_string(), tag_get_tag_type_id());
 
@@ -115,7 +95,8 @@ void dbg_print_banner(void)
     printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d sec\n", "Beacon Rate (Fast)", TBM_FAST_BEACON_RATE_SEC);
     printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d sec\n", "Beacon Rate (Slow)", TBM_SLOW_BEACON_RATE_SEC);
     printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d sec\n", "Temperature Report Rate", (int)(TTM_TIMER_PERIOD_SEC_RELOAD));
-    printf(COLOR_B_WHITE "%35s |"COLOR_CYAN"    %s\n", "Uptime", uptime);
+    printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d sec\n", "Uptime Beacon Rate", (int)(TUM_TIMER_PERIOD_SEC));
+    printf(COLOR_B_WHITE "%35s |"COLOR_CYAN"    %s\n", "Current Uptime", uptime);
 
     printf(COLOR_WHITE "-------------------------------------------------------------------------\n\n");
     printf(COLOR_RST);
@@ -200,33 +181,26 @@ char* dbg_log_filter_to_string(dbg_log_filters_t filter)
     switch(filter) {
         case DBG_CAT_TAG_LF:
             return COLOR_B_WHITE "TAG_LF" COLOR_RST;
-            break;
         case DBG_CAT_TAG_MAIN:
             return COLOR_B_WHITE "TAG_MAIN" COLOR_RST;
-            break;
         case DBG_CAT_TAG_BEACON:
             return COLOR_B_WHITE "TAG_BEACON" COLOR_RST;
-            break;
         case DBG_CAT_BLE:
             return COLOR_B_WHITE "BLE" COLOR_RST;
-            break;
         case DBG_CAT_GENERIC:
             return COLOR_B_WHITE "GENERIC" COLOR_RST;
-            break;
-        case DBG_CAT_WARNING:
-            return COLOR_B_RED "WARNING" COLOR_RST;
-            break;
-        case DBG_CAT_SYSTEM:
-            return COLOR_B_BLUE "SYSTEM" COLOR_RST;
-            break;
         case DBG_CAT_TEMP:
             return COLOR_B_WHITE "TEMPERATURE" COLOR_RST;
-            break;
         case DBG_CAT_BATTERY:
             return COLOR_B_WHITE "BATTERY" COLOR_RST;
+        case DBG_CAT_CLI:
+            return COLOR_B_WHITE "CLI" COLOR_RST;
+        case DBG_CAT_WARNING:
+            return COLOR_B_RED "WARNING" COLOR_RST;
+        case DBG_CAT_SYSTEM:
+            return COLOR_B_BLUE "SYSTEM" COLOR_RST;
         default:
             return "UNKNOWN";
-            break;
     }
 }
 

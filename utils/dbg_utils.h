@@ -9,6 +9,7 @@
 #include "em_usart.h"
 #include "stdio.h"
 #include "tag_defines.h"
+#include "tag_uptime_machine.h"
 
 
 //******************************************************************************
@@ -64,6 +65,7 @@ typedef enum dbg_log_filters_t {
     DBG_CAT_TEMP =          (1 << 6),
     DBG_CAT_SYSTEM =        (1 << 7),
     DBG_CAT_BATTERY =       (1 << 8),
+    DBG_CAT_CLI =           (1 << 9),
     DBG_CAT_ALL_DISABLED = 0,
     DBG_CAT_ALL_ENABLED = -1
 } dbg_log_filters_t;
@@ -83,13 +85,12 @@ extern volatile dbg_log_filters_t log_filter_mask;
 #if defined(TAG_LOG_PRESENT)
 
 char* dbg_log_filter_to_string(dbg_log_filters_t filter);
-void print_timestamp(void);
 
 #define DEBUG_LOG(log_filter, format, args...)                                                                    \
    do {                                                                                                           \
        if(log_enable) {                                                                                           \
            if (((log_filter & log_filter_mask) | log_filter_disabled)) {                                          \
-               print_timestamp();                                                                                 \
+               tum_print_timestamp();                                                                             \
                printf("[%s] (%s:%u) " format, dbg_log_filter_to_string(log_filter), __FILE__, __LINE__, ##args);  \
            }                                                                                                      \
        }                                                                                                          \
@@ -105,7 +106,7 @@ void dbg_trap(void);
 #define DEBUG_TRAP(format, args...)                                                                            \
    do {                                                                                                        \
        if (trap_enable) {                                                                                      \
-           print_timestamp();                                                                                  \
+           tum_print_timestamp();                                                                              \
            printf(COLOR_B_RED "[DEBUG_TRAP] (%s:%u) " format COLOR_RST, __FILE__, __LINE__, ##args);           \
            dbg_trap();                                                                                         \
        }                                                                                                       \
