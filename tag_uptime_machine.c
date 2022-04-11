@@ -89,7 +89,7 @@ void tag_uptime_run(void)
     // Check if it is time to report uptime message.
     if (tag_sw_timer_is_expired(&uptime_report_tmr)) {
         tag_sw_timer_reload(&uptime_report_tmr, TUM_TIMER_PERIOD_SEC);
-        //tbm_set_event(TBM_UPTIME_EVT, true);
+        tbm_set_event(TBM_UPTIME_EVT, true);
         DEBUG_LOG(DBG_CAT_SYSTEM, "Uptime: %d days", uptime.days);
     }
 }

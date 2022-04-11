@@ -9,8 +9,13 @@
 //******************************************************************************
 // Defines
 //******************************************************************************
+#if defined(TAG_DEV_MODE_PRESENT)
+#define TUM_TIMER_PERIOD_SEC         (120)  /* Sends Uptime Message every 1 hour */
+#define TUM_TIMER_PERIOD_SEC_INIT    (120)   /* Init with 2 minutes */
+#else
 #define TUM_TIMER_PERIOD_SEC         (3600)  /* Sends Uptime Message every 1 hour */
 #define TUM_TIMER_PERIOD_SEC_INIT    (120)   /* Init with 2 minutes */
+#endif
 
 //******************************************************************************
 // Extern global variables
