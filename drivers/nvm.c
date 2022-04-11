@@ -61,9 +61,9 @@ uint32_t nvm_read_mac_address(uint8_t *mac)
     ret = nvm3_readData(nvm3_defaultHandle, NVM_MAC_ADDRESS_KEY, mac, 6);
 
     if (ret == ECODE_NVM3_OK) {
-        status = 1;
-    } else {
         status = 0;
+    } else {
+        status = 1;
     }
 
     nvm_repack();
@@ -79,9 +79,9 @@ uint32_t nvm_write_mac_address(uint8_t *mac)
     ret = nvm3_writeData(nvm3_defaultHandle, NVM_MAC_ADDRESS_KEY, mac, 6);
 
     if (ret == ECODE_NVM3_OK) {
-        status = 1;
-    } else {
         status = 0;
+    } else {
+        status = 1;
     }
 
     nvm_repack();
