@@ -1,20 +1,28 @@
 /*
- * tag_status_machine.h
+ * tag_status_fw_machine.h
  *
  */
 
-#ifndef TAG_STATUS_MACHINE_H_
-#define TAG_STATUS_MACHINE_H_
+#ifndef TAG_STATUS_FW_MACHINE_H_
+#define TAG_STATUS_FW_MACHINE_H_
+
+#include "stdio.h"
 
 #include "tag_defines.h"
 
 //******************************************************************************
 // Defines
 //******************************************************************************
+// Start-up values for Tag Extended Staus and Firmware Revision beacon rates
+#define TMM_TAG_EXT_STATUS_PERIOD_SEC_INIT             (1)
+#define TMM_TAG_FW_REV_PERIOD_SEC_INIT                 (1)
+
 #if defined(TAG_DEV_MODE_PRESENT)
-#define TMM_TAG_EXT_STATUS_PERIOD_SEC                  (120)                    // Period for Tag Extended Status Beacon sent every 2 minutes
+#define TMM_TAG_EXT_STATUS_PERIOD_SEC                  (120)                    // Reload Period for Tag Extended Status Beacon sent every 2 minutes
+#define TMM_TAG_FW_REV_PERIOD_SEC                      (240)                    // Reload Period for Tag Firmware Revision Beacon sent every 4 minutes
 #else
-#define TMM_TAG_EXT_STATUS_PERIOD_SEC                  (1800)                   // Period for Tag Extended Status Beacon sent every 30 minutes
+#define TMM_TAG_EXT_STATUS_PERIOD_SEC                  (1800)                   // Reload Period for Tag Extended Status Beacon sent every 30 minutes
+#define TMM_TAG_FW_REV_PERIOD_SEC                      (1800)                   // Reload Period for Tag Firmware Revision Beacon sent every 30 minutes
 #endif
 
 
@@ -25,10 +33,16 @@
 //******************************************************************************
 // Data types
 //******************************************************************************
+typedef enum tsm_tag_status_flags_t {
+     TSM_BATTERY_LOW,
+     TSM_TAMPER,
+     TSM_TAG_IN_USE,
+     TSM_TAG_IN_MOTION,
+     TSM_AMBIENT_LIGHT,
+     TSM_LF_RX_ONLY_IN_MOTION,
+     TSM_DEEP_SLEEP
+} tsm_tag_status_flags_t;
 
-// -----------------------------------------------------------------------------
-// Tag Status Data Types
-// -----------------------------------------------------------------------------
 typedef struct tsm_tag_status_t {
     union {
         /* Byte 0 */
@@ -56,36 +70,15 @@ typedef struct tsm_tag_ext_status_t {
     };
 } tsm_tag_ext_status_t;
 
-// -----------------------------------------------------------------------------
-// Tag Status Beacon Data Types
-// -----------------------------------------------------------------------------
-typedef struct tsm_tag_status_beacon_t {
-    tsm_tag_status_t status;
-} tsm_tag_status_beacon_t;
-
-typedef struct tsm_tag_ext_status_beacon_t {
-    uint8_t fw_rev[4];
-    tsm_tag_ext_status_t ext_status;
-} tsm_tag_ext_status_beacon_t;
-
-
 //******************************************************************************
 // Interface
 //******************************************************************************
-/**
- * @brief Return pointer to Tag Status Beacon Data
- * @return tsm_tag_status_beacon_t*
- */
-tsm_tag_status_beacon_t* tsm_get_tag_status_beacon_data(void);
-
-/**
- * @brief Return pointer to Tag Extended Status Beacon Data
- * @return tsm_tag_ext_status_beacon_t*
- */
-tsm_tag_ext_status_beacon_t* tsm_get_tag_ext_status_beacon_data(void);
-
-void tag_ext_status_run(void);
-void tag_status_run(void);
+tsm_tag_status_t* tsm_get_tag_status_beacon_data(void);
+tsm_tag_ext_status_t* tsm_get_tag_ext_status_beacon_data(void);
+void tsm_set_tag_status_flag(tsm_tag_status_flags_t flag);
+void tsm_clear_tag_status_flag(tsm_tag_status_flags_t flag);
+void tag_extended_status_run(void);
+void tag_firmware_rev_run(void);
 uint32_t tsm_init(void);
 
-#endif /* TAG_STATUS_MACHINE_H_ */
+#endif /* TAG_STATUS_FW_MACHINE_H_ */

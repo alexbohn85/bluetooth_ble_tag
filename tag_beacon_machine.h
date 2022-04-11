@@ -15,6 +15,8 @@
 //******************************************************************************
 // Defines
 //******************************************************************************
+#define TBM_INIT_BEACON_RATE_SEC              (3)                               // Init value (only first time)
+#define TBM_INIT_BEACON_RATE_SEC_RELOAD       ((TBM_INIT_BEACON_RATE_SEC * 1000) / TMM_DEFAULT_TIMER_PERIOD_MS)
 
 #define TBM_FAST_BEACON_RATE_SEC              (12)                              // When tag is in certain states (e.g Staying In Field, Tamper Alert, Man Down, etc)
 #define TBM_FAST_BEACON_RATE_RELOAD           ((TBM_FAST_BEACON_RATE_SEC * 1000) / TMM_DEFAULT_TIMER_PERIOD_MS)
@@ -26,12 +28,10 @@
 // Data types
 //******************************************************************************
 typedef enum tbm_beacon_events_t {
-    TBM_TAG_STATUS_EVT     = (1 << 0),
+    TBM_TAG_STATUS_EVT     = (1 << 0),  /* used for some async events like motion, tamper, etc */
     TBM_FALL_DETECT_EVT    = (1 << 1),
     TBM_LF_EVT             = (1 << 2),
     TBM_BUTTON_EVT         = (1 << 3),
-    TBM_MOTION_EVT         = (1 << 4),
-    TBM_TAMPER_EVT         = (1 << 5),
     TBM_EXT_STATUS_EVT     = (1 << 6),
     TBM_CMD_ACK_EVT        = (1 << 7),
     TBM_TEMPERATURE_EVT    = (1 << 8),
