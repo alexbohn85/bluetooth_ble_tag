@@ -8,6 +8,7 @@
  * to yield back to the main machine super loop.
  */
 
+#include <tag_status_fw_machine.h>
 #include "stdio.h"
 #include "stdbool.h"
 
@@ -28,7 +29,6 @@
 #include "wdog.h"
 #include "lf_machine.h"
 #include "tag_beacon_machine.h"
-#include "tag_status_machine.h"
 #include "temperature_machine.h"
 #include "battery_machine.h"
 #include "tag_uptime_machine.h"
@@ -39,7 +39,6 @@
 //******************************************************************************
 // Defines
 //******************************************************************************
-#define DEBUG_TTM(format, args...)     DEBUG_LOG(DBG_CAT_TAG_MAIN, format, ##args)
 
 //******************************************************************************
 // Data types
@@ -64,29 +63,10 @@ static void tmm_set_mode(tmm_modes_t state)
     tmm_current_mode = state;
 }
 
-//! @brief Convert tmm_current_mode state to string.
-static char* tmm_current_mode_to_string(void)
-{
-    switch(tmm_current_mode) {
-        case TMM_NORMAL_MODE:
-            return "Normal Mode";
-            break;
-        case TMM_MANUFACTURING_MODE:
-            return "Manufacturing Mode";
-            break;
-        case TMM_PAUSED:
-            return "Paused";
-            break;
-        default:
-            return "Unknown";
-            break;
-    }
-}
-
 //! @brief Reload Tag Main Machine RTCC compare
 static void tmm_rtcc_update(void)
 {
-    // Update TMM RTCC Main Tick
+    // Update Tag Main Machine RTCC CC1 value (for next tick)
     uint32_t timer_offset = ((uint32_t)TMM_DEFAULT_TIMER_RELOAD) + RTCC_CounterGet();
     RTCC_ChannelCompareValueSet(TMM_RTCC_CC1, timer_offset);
 }
@@ -102,18 +82,18 @@ static void tmm_slow_tasks_run(void)
 
     if (tag_sw_timer_is_expired(&tmm_slow_timer)) {
 
-        // Used to debug power manager (enable this debug in power manager menu)
-        //sl_power_manager_debug_print_em_requirements();
-
         // Reload Slow Task Timer
         tag_sw_timer_reload(&tmm_slow_timer, TMM_DEFAULT_SLOW_TIMER_RELOAD);
 
         //**********************************************************************
-        // Add below all slow tasks calls
+        // Add below all slow tasks (tick at tmm_slow_timer)
         //**********************************************************************
 
         // Battery Machine Process
         //battery_machine_run();
+
+        // Tag Firmware Revision Process
+        tag_firmware_rev_run();
 
         // Tag Uptime Machine Process
         tag_uptime_run();
@@ -122,7 +102,7 @@ static void tmm_slow_tasks_run(void)
         temperature_run();
 
         // Tag Extended Status Machine Process
-        tag_ext_status_run();
+        tag_extended_status_run();
     }
 }
 
@@ -131,15 +111,14 @@ static uint32_t tmm_init_machines(void)
 {
     uint32_t status = 0;
 
-    // Add here all the machines init functions
 #if TAG_ID == UT3_ID
-    lfm_init();   // LF Machine
-    ttm_init();   // Tag Temp Machine
-    tsm_init();   // Tag Status Machine
-    tbm_init();   // Tag Beacon Machine
-    bmm_init();   // BLE Manager Machine
-    tum_init();   // Tag Uptime Machine
-    //btm_init();   // Battery Machine
+    lfm_init();      // LF Machine
+    ttm_init();      // Tag Temp Machine
+    tsm_init();      // Tag Status Machine
+    tbm_init();      // Tag Beacon Machine
+    bmm_init();      // BLE Manager Machine
+    tum_init();      // Tag Uptime Machine
+    //btm_init();    // Battery Machine
 #endif
 
     return status;
@@ -180,32 +159,32 @@ static void tmm_init(tmm_modes_t mode)
 // Non Static functions (Interface)
 //******************************************************************************
 /*!  @brief Tag Main Machine running on RTCC CC Channel 1
- *   @details Tag Main Machine entry point. This routine will be called on RTCC
+ *   @details Tag Main Machine "super loop" entry point. This routine will be called on RTCC
  *       CC1 compare interrupt to process all the synchronous and asynchronous
  *       events. Each feature will have its own machines that will be called
  *       within this ISRs context. The main tick period is defined at @ref
  *       TMM_DEFAULT_TIMER_PERIOD_MS.
 *******************************************************************************/
-void tag_main_run(void)
+void tag_main_machine_isr(void)
 {
 
     tmm_modes_t mode = tmm_get_mode();
 
     switch(mode)
     {
-        case TMM_NORMAL_MODE:
-            tmm_slow_tasks_run();
-            lfm_run();
-            tag_status_run();
-            tag_beacon_run();
-            ble_manager_run();
-            break;
+        case TMM_RUNNING:
 
-        case TMM_MANUFACTURING_MODE:
+            lf_run();
             tmm_slow_tasks_run();
-            lfm_run();
-            tag_status_run();
+
+            //------------------------------------------------------------------
+            // Keep below calls together in this order.
+            //------------------------------------------------------------------
+
+            // Check for all Beacon Events and dispatch messages to BLE Manager Queue
             tag_beacon_run();
+
+            // Build packet and transmit BLE Advertising Beacons
             ble_manager_run();
             break;
 
@@ -214,7 +193,7 @@ void tag_main_run(void)
             break;
 
         default:
-            DEBUG_TTM("Error unknown mode = %lu", (uint32_t)mode);
+            DEBUG_LOG(DBG_CAT_TAG_MAIN,"Error unknown mode = %d", mode);
             DEBUG_TRAP();
             break;
     }
@@ -231,15 +210,11 @@ void tag_main_run(void)
     }
 
 #if defined(TAG_WDOG_PRESENT)
-    //TODO Do a burn in test
     WDOGn_Feed(WDOG0);
 #endif
 
 }
-/**
- * @brief Get Tag Main Machine current state
- * @return @ref tmm_modes_t
- */
+
 tmm_modes_t tmm_get_mode(void)
 {
     return tmm_current_mode;
@@ -256,18 +231,11 @@ void tmm_resume(void)
     tmm_current_mode = tmm_stored_mode;
 }
 
-//! @brief Start Tag Main Machine in @ref TMM_NORMAL_MODE
-void tmm_start_normal_mode(void)
+//! @brief Start Tag Main Machine
+void tmm_start(tmm_modes_t mode)
 {
-    DEBUG_TTM("Starting Tag Main Machine in NORMAL MODE...");
-    tmm_init(TMM_NORMAL_MODE);
-}
-
-//! @brief Start Tag Main Machine in @ref TMM_MANUFACTURING_MODE
-void tmm_start_manufacturing_mode(void)
-{
-    DEBUG_TTM("Starting Tag Main Machine in MANUFACTURING MODE...");
-    tmm_init(TMM_MANUFACTURING_MODE);
+    DEBUG_LOG(DBG_CAT_TAG_MAIN, "Starting Tag Main Machine process...");
+    tmm_init(mode);
 }
 
 //! @brief Get Tag Main Machine main tick period

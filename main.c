@@ -80,7 +80,7 @@ void tag_power_settings(void)
 //------------------------------------------------------------------------------
 void tag_init(void)
 {
-    // Reset uptime variable (only when Power-On Reset)
+    // Tag 'uptime' conditional initialization
     tum_preinit();
 
     // Initialize UART (used by dbg_utils and cli)
@@ -114,28 +114,27 @@ void tag_init(void)
     // Initialize Tag Main Machine "Main System Tick"
     switch(boot_get_mode()) {
 
-        case BOOT_NORMAL:
+        case BOOT_DEFAULT:
+            DEBUG_LOG(DBG_CAT_SYSTEM, "Boot Select (boot_mode = 0x%.2X) -> Default mode", boot_get_mode());
+            tmm_start(TMM_RUNNING);
 #if defined(TAG_DEV_MODE_PRESENT)
             dbg_log_enable(true);
             cli_start();
 #else
             dbg_log_enable(false);
 #endif
-            DEBUG_LOG(DBG_CAT_SYSTEM, "Boot Select (boot_mode = 0x%.2X) -> Normal mode", boot_get_mode());
-            tmm_start_normal_mode();
             break;
 
         case BOOT_MANUFACTURING_TEST:
+            DEBUG_LOG(DBG_CAT_SYSTEM, "Boot Select (boot_mode = 0x%.2X) -> Manufacturing mode", boot_get_mode());
+            tmm_start(TMM_RUNNING);
             dbg_log_enable(true);
             cli_start();
-            DEBUG_LOG(DBG_CAT_SYSTEM, "Boot Select (boot_mode = 0x%.2X) -> Manufacturing mode", boot_get_mode());
-            tmm_start_manufacturing_mode();
             break;
 
         default:
-            DEBUG_LOG(DBG_CAT_SYSTEM, "ERROR Boot Select (boot_mode = 0x%.2X) -> Not recognized...\n", boot_get_mode());
-            DEBUG_LOG(DBG_CAT_SYSTEM, "\n.... Booting in NORMAL MODE!\n");
-            tmm_start_normal_mode();
+            DEBUG_LOG(DBG_CAT_WARNING, "ERROR Boot Select (boot_mode = 0x%.2X) -> Not recognized...\n", boot_get_mode());
+            tmm_start(TMM_RUNNING);
             break;
     }
 
