@@ -50,11 +50,11 @@ static void ble_api_on_system_boot(sl_bt_msg_t *evt) {
     uint8_t address_type;
     uint8_t system_id[8];
 
-    //! Extract unique ID from BT Address.
+    // Extract unique ID from BT Address.
     sc = sl_bt_system_get_identity_address(&address, &address_type);
     app_assert_status(sc);
 
-    //! Pad and reverse unique ID to get System ID.
+    // Pad and reverse unique ID to get System ID.
     system_id[0] = address.addr[5];
     system_id[1] = address.addr[4];
     system_id[2] = address.addr[3];

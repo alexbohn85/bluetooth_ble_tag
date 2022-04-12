@@ -7,6 +7,7 @@
 #include "string.h"
 
 #include "sl_udelay.h"
+#include "sl_bt_api.h"
 #include "em_common.h"
 #include "ecode.h"
 #include "app_assert.h"
@@ -14,7 +15,6 @@
 #include "nvm3.h"
 
 #include "dbg_utils.h"
-
 
 //******************************************************************************
 // Defines
@@ -76,7 +76,13 @@ uint32_t nvm_write_mac_address(uint8_t *mac)
     Ecode_t ret;
     uint32_t status;
 
+    // Write to NVM user area
     ret = nvm3_writeData(nvm3_defaultHandle, NVM_MAC_ADDRESS_KEY, mac, 6);
+
+    // Write to NVM BLE Core area (tag needs to reboot to apply new mac address)
+    bd_addr bd_mac;
+    memcpy(bd_mac.addr, mac, 6);
+    ret = sl_bt_system_set_identity_address(bd_mac, 0);
 
     if (ret == ECODE_NVM3_OK) {
         status = 0;
