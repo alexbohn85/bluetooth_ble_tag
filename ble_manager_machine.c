@@ -101,7 +101,7 @@ static void ble_api_start_adv(uint8_t retransmissions, uint32_t min_interval, ui
     *     - <b>6:</b> Advertise on CH38 and CH39
     *     - <b>7:</b> Advertise on all channels
     */
-    sl_bt_advertiser_set_channel_map(advertising_set_handle, 7);
+    sl_bt_advertiser_set_channel_map(advertising_set_handle, 1);
 
 #if 1
     // Start BLE advertising (advertiser_non_connectable)
@@ -238,7 +238,7 @@ static void bmm_start_adv(void)
 static void bmm_append_adv_flags(uint8_t *pdu_len, uint8_t flags)
 {
     adv_payload.data[(*pdu_len)++] = 0x02;
-    adv_payload.data[(*pdu_len)++] = ADV_TYPE_FLAGS;
+    adv_payload.data[(*pdu_len)++] = ADV_FLAGS;
     adv_payload.data[(*pdu_len)++] = flags;
 }
 
@@ -253,7 +253,7 @@ static void bmm_append_adv_complete_local_name(uint8_t *pdu_len)
     adv_payload.data[(*pdu_len)++] = 0;
 
     // Add adv_type
-    adv_payload.data[(*pdu_len)++] = ADV_TYPE_COMPLETE_LOCAL_NAME;
+    adv_payload.data[(*pdu_len)++] = ADV_COMPLETE_LOCAL_NAME;
 
     // Add tag_name
     for (i = 0; i < strlen(tag_name); i++) {
@@ -316,7 +316,7 @@ static void bmm_append_man_spec_data(uint8_t *pdu_len)
 
     // Fill in all Manufacturer Specific Data fields
     adv_payload.data[(*pdu_len)++] = 0;                                         // placeholder for the length once we finish packet assembly.
-    adv_payload.data[(*pdu_len)++] = ADV_TYPE_MANUF_SPEC_DATA;                  // ADV type id
+    adv_payload.data[(*pdu_len)++] = ADV_MANU_SPEC_DATA;                        // ADV type id
     man_spec_data_len++;
     adv_payload.data[(*pdu_len)++] = UUID_GUARD_L;                              // Manufacturer 16-bits UUID (little-endian)
     man_spec_data_len++;
