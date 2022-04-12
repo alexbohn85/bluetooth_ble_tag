@@ -107,7 +107,7 @@ static void tbm_clear_event(tbm_beacon_events_t event)
  * @param bmm_msg_t*
  * @param tbm_beacon_events_t
  */
-static uint32_t tbm_dispatch_msg(bmm_msg_t* msg, tbm_beacon_events_t event)
+static void tbm_dispatch_msg(bmm_msg_t* msg, tbm_beacon_events_t event)
 {
     uint32_t status;
 
@@ -118,10 +118,8 @@ static uint32_t tbm_dispatch_msg(bmm_msg_t* msg, tbm_beacon_events_t event)
         tbm_clear_event(event);
         DEBUG_LOG(DBG_CAT_TAG_BEACON, COLOR_BG_BLUE COLOR_B_CYAN "%s" COLOR_RST " beacon message was enqueued...", tbm_get_event_name(event));
     } else {
-        status = 1;
+        DEBUG_LOG(DBG_CAT_WARNING, "Error to enqueue beacon message...");
     }
-
-    return status;
 }
 
 static void tbm_send_firmware_rev_beacon(void)
@@ -148,12 +146,16 @@ static void tbm_send_firmware_rev_beacon(void)
 static void tbm_send_tag_ext_status_beacon(void)
 {
     volatile uint8_t i = 0;
+    volatile uint8_t j;
+    bmm_msg_t msg;
 
     if (!bmm_queue_is_full()) {
         tsm_tag_ext_status_t *data = tsm_get_tag_ext_status_beacon_data();
-        bmm_msg_t msg;
         msg.type = BLE_MSG_TAG_EXT_STATUS;
-        msg.data[i++] = data->byte;
+        msg.data[i++] = data->length;
+        for (j = 0; j < data->length; j++) {
+            msg.data[i++] = data->bytes[j];
+        }
         msg.length = i + 1;
 
         // Send msg to BLE Manager queue and clear TBM event.
@@ -162,7 +164,6 @@ static void tbm_send_tag_ext_status_beacon(void)
     } else {
         DEBUG_LOG(DBG_CAT_WARNING, "BMM message queue is full");
     }
-
 }
 
 static void tbm_send_tag_status_beacon(void)
@@ -330,16 +331,19 @@ static void tbm_decode_event(tbm_beacon_events_t event)
 //******************************************************************************
 /**
  * @brief Sets a msg event flag for Tag Beacon Machine
- * @param event
- * @param is_async
+ * @param tbm_beacon_events_t
+ * @param bool (if this message is async it will be sent immediately,
+ *     otherwise it will sync with next "fast" or "slow" beacon rate timer)
  */
 void tbm_set_event(tbm_beacon_events_t event, bool is_async)
 {
     tbm_status.events |= event;
 
     if (is_async) {
+        // set flag
         tbm_status.event_async_flag |= event;
     } else {
+        // clear flag
         tbm_status.event_async_flag &= ~event;
     }
 }
@@ -356,46 +360,49 @@ void tag_beacon_run(void)
     if (bmm_queue_is_empty()) {
         int8_t bit;
 
-        // Tick Tag Beacon Machine (Synchronous Beacon Rate)
+        // Tick Synchronous Beacon timer
         tag_sw_timer_tick(&tbm_beacon_timer);
 
-        // First add Tag Status Message (this message is present on every single transmission)
-        // This message also handles some tag features events like tamper, battery low, motion, ambient light sensor, etc.
+        // Note: - Async means messages that are not synchronized with "slow" or "fast" beacon rate and will be transmitted immediately.
+        //       - Sync means messages that are to be synchronized with "slow" or "fast" beacon rate so it will only be sent
+        //             once 'tbm_beacon_timer' expires.
+
+        // Check if there are async or sync tag beacon events
         if ((tbm_status.event_async_flag != 0) || ( tag_sw_timer_is_expired(&tbm_beacon_timer))) {
+            // First add Tag Status Message (this message is present on every single transmission)
+            // This message also handles some tag features events like tamper, battery low, motion, ambient light sensor, etc.
             tbm_send_tag_status_beacon();
-        }
 
-        // Then check for async beacon events
-        if (tbm_status.event_async_flag != 0) {
-            for (bit = 0; bit < TBM_MAX_EVENTS; bit++) {
-                tbm_beacon_events_t event = tbm_get_async_event(bit);
-                if (event) {
-                    tbm_decode_event(event);
-                }
-            }
-        }
-
-        // Then check if it is time to send synchronous beacons
-        if (tag_sw_timer_is_expired(&tbm_beacon_timer)) {
-            if (tbm_status.events != 0) {
+            // Then check for async beacon events (these are usually critical events like entering lf field, etc..)
+            if (tbm_status.event_async_flag != 0) {
                 for (bit = 0; bit < TBM_MAX_EVENTS; bit++) {
-                    tbm_beacon_events_t event = tbm_get_sync_event(bit);
+                    tbm_beacon_events_t event = tbm_get_async_event(bit);
                     if (event) {
                         tbm_decode_event(event);
                     }
                 }
             }
 
-            // Reload synchronous beacon rate
-            // Check feature states to decide if we should reload fast or slow beacon rate.
+            // Then check if it is time to send synchronous beacons (these are usually periodic events like staying in field, firmware rev, uptime.. etc)
+            if (tag_sw_timer_is_expired(&tbm_beacon_timer)) {
+                if (tbm_status.events != 0) {
+                    for (bit = 0; bit < TBM_MAX_EVENTS; bit++) {
+                        tbm_beacon_events_t event = tbm_get_sync_event(bit);
+                        if (event) {
+                            tbm_decode_event(event);
+                        }
+                    }
+                }
+            }
 
+            // Reload Synchronous Beacon timer
+            // Check for feature states and decide if next beacon is "slow" or "fast" interval.
             if ((lfm_get_lf_status() & LFM_STAYING_IN_FIELD_FLAG)) {
                 tag_sw_timer_reload(&tbm_beacon_timer, TBM_FAST_BEACON_RATE_RELOAD);
             } else {
                 tag_sw_timer_reload(&tbm_beacon_timer, TBM_FAST_BEACON_RATE_RELOAD);
                 //tag_sw_timer_reload(&tbm_beacon_timer, TBM_SLOW_BEACON_RATE_RELOAD);
             }
-
         }
     }
 }

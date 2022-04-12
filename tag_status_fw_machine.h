@@ -18,8 +18,8 @@
 #define TMM_TAG_FW_REV_PERIOD_SEC_INIT                 (1)
 
 #if defined(TAG_DEV_MODE_PRESENT)
-#define TMM_TAG_EXT_STATUS_PERIOD_SEC                  (120)                    // Reload Period for Tag Extended Status Beacon sent every 2 minutes
-#define TMM_TAG_FW_REV_PERIOD_SEC                      (240)                    // Reload Period for Tag Firmware Revision Beacon sent every 4 minutes
+#define TMM_TAG_EXT_STATUS_PERIOD_SEC                  (12)                    // Reload Period for Tag Extended Status Beacon sent every 2 minutes
+#define TMM_TAG_FW_REV_PERIOD_SEC                      (24)                    // Reload Period for Tag Firmware Revision Beacon sent every 4 minutes
 #else
 #define TMM_TAG_EXT_STATUS_PERIOD_SEC                  (1800)                   // Reload Period for Tag Extended Status Beacon sent every 30 minutes
 #define TMM_TAG_FW_REV_PERIOD_SEC                      (1800)                   // Reload Period for Tag Firmware Revision Beacon sent every 30 minutes
@@ -60,13 +60,14 @@ typedef struct tsm_tag_status_t {
 } tsm_tag_status_t;
 
 typedef struct tsm_tag_ext_status_t {
+    uint8_t length;
     union {
         /* Byte 0 */
         uint8_t slow_beacon_rate: 3;    /* Current setting for Slow Beacon Rate */
         uint8_t fast_beacon_rate: 3;    /* Current setting for Fast Beacon Rate */
         uint8_t lf_sensitivity : 2;     /* Current setting for LF Gain */
 
-        uint8_t byte;
+        uint8_t bytes[6];
     };
 } tsm_tag_ext_status_t;
 

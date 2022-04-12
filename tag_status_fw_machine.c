@@ -28,12 +28,11 @@
 // Data types
 //******************************************************************************
 
-
 //******************************************************************************
 // Global variables
 //******************************************************************************
-static tag_sw_timer_t ext_status_report_tmr;
-static tag_sw_timer_t fw_rev_report_tmr;
+static tag_sw_timer_t extended_status_timer;
+static tag_sw_timer_t fw_revision_timer;
 static tsm_tag_status_t tsm_tag_status;
 static tsm_tag_ext_status_t tsm_tag_ext_status;
 
@@ -41,20 +40,24 @@ static tsm_tag_ext_status_t tsm_tag_ext_status;
 // Static functions
 //******************************************************************************
 /**
- * @brief Update Tag EXTENDED Status Beacon Data
+ * @brief Update Tag Extended Status Beacon Data
  */
 static void tsm_update_tag_extended_status(void)
 {
-    //TODO TO BE IMPLEMENTED!!
+    //TODO All hard coded values now for later implementation of configurable fast_beacon_rate, slow_beacon_rate, etc..
 
     // Get Fast Beacon Rate configuration
-    tsm_tag_ext_status.fast_beacon_rate = 0;
-
-    // Get LF Gain Reduction Setting
-    tsm_tag_ext_status.lf_sensitivity = as39_get_attenuation_set();
+    tsm_tag_ext_status.fast_beacon_rate = 0x04;
 
     // Get Slow Beacon Rate configuration
-    tsm_tag_ext_status.slow_beacon_rate = 0;
+    tsm_tag_ext_status.slow_beacon_rate = 0x04;
+
+    // Get LF Gain Reduction Setting
+    tsm_tag_ext_status.lf_sensitivity = 0; // values (0, 0dBm), (1, -4dBm), (2, -16dBm), (3, -24dBm)
+
+    // For now we only have 1 byte so...
+    tsm_tag_ext_status.length = 1;
+
 }
 
 /**
@@ -120,23 +123,25 @@ void tsm_clear_tag_status_flag(tsm_tag_status_flags_t flag)
 }
 
 /**
- * @brief Tag Status Machine - Extended Status (Slow Task)
- * @details Reports Tag Extended Status Message - Contains FW Revision + Extended Status Bytes
+ * @brief Tag Extended Status Report (Slow Task)
  */
 void tag_extended_status_run(void)
 {
-    tag_sw_timer_tick(&ext_status_report_tmr);
+    tag_sw_timer_tick(&extended_status_timer);
 
-    if (tag_sw_timer_is_expired(&ext_status_report_tmr)) {
+    if (tag_sw_timer_is_expired(&extended_status_timer)) {
 
         // Updated Tag Extended Status Data
         tsm_update_tag_extended_status();
 
-        // Send Asynchronous Tag Beacon Event to Tag Beacon Machine
-        tbm_set_event(TBM_EXT_STATUS_EVT, true);
+        // Send Asynchronous Tag Beacon Event to Tag Beacon Machine (this message will be sent immediately)
+        //tbm_set_event(TBM_EXT_STATUS_EVT, true);
 
-        // Reload TSM timer
-        tag_sw_timer_reload(&ext_status_report_tmr, TMM_TAG_EXT_STATUS_PERIOD_SEC);
+        // Send Sync Tag Beacon Event to Tag Beacon Machine (this message will synchronize with the slow or fast beacon rate)
+        tbm_set_event(TBM_EXT_STATUS_EVT, false);
+
+        // Reload Tag Extended Status report timer
+        tag_sw_timer_reload(&extended_status_timer, TMM_TAG_EXT_STATUS_PERIOD_SEC);
     }
 }
 
@@ -145,29 +150,34 @@ void tag_extended_status_run(void)
  */
 void tag_firmware_rev_run(void)
 {
-    tag_sw_timer_tick(&fw_rev_report_tmr);
+    tag_sw_timer_tick(&fw_revision_timer);
 
-    if (tag_sw_timer_is_expired(&fw_rev_report_tmr)) {
+    if (tag_sw_timer_is_expired(&fw_revision_timer)) {
 
-        tag_sw_timer_reload(&ext_status_report_tmr, TMM_TAG_EXT_STATUS_PERIOD_SEC);
+        // Send Asynchronous Tag Firmware Revision Beacon Event to Tag Beacon Machine (this message will be sent immediately)
+        //tbm_set_event(TBM_FIRMWARE_REV_EVT, true);
 
-        // Send Asynchronous Tag Firmware Revision Beacon Event to Tag Beacon Machine
+        // Send Synchronous Tag Firmware Revision Beacon Event to Tag Beacon Machine (this message will synchronize with the slow or fast beacon rate)
         tbm_set_event(TBM_FIRMWARE_REV_EVT, true);
+
+        // Reload Firmware Rev report timer
+        tag_sw_timer_reload(&fw_revision_timer, TMM_TAG_FW_REV_PERIOD_SEC);
     }
 }
 
-//! @brief Tag Status Machine Init
+/**
+ * @brief Tag Status Machine Init
+ */
 uint32_t tsm_init(void)
 {
-
-    // Init Tag Extended Status
+    // Init Tag Extended Status Byte
     tsm_update_tag_extended_status();
 
     // Init Tag Extended Status Report Timer
-    tag_sw_timer_reload(&ext_status_report_tmr, TMM_TAG_EXT_STATUS_PERIOD_SEC_INIT);
+    tag_sw_timer_reload(&extended_status_timer, TMM_TAG_EXT_STATUS_PERIOD_SEC_INIT);
 
     // Init Tag Firmware Rev Report Timer
-    tag_sw_timer_reload(&ext_status_report_tmr, TMM_TAG_FW_REV_PERIOD_SEC_INIT);
+    tag_sw_timer_reload(&fw_revision_timer, TMM_TAG_FW_REV_PERIOD_SEC_INIT);
 
     return 0;
 }

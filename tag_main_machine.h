@@ -3,7 +3,7 @@
  * @brief Tag Main Machine
  *
  * Here are all the Tag functionalities state machines. Main routine "tag_main_run"
- * runs every TMM_DEFAULT_TIMER_PERIOD_MS millisecond based on RTCC timer.
+ * runs every TMM_RTCC_TIMER_PERIOD_MS millisecond based on RTCC timer.
  * It is cooperative multitasking which means every Machine called is responsible
  * to yield back to the main machine super loop.
  *
@@ -19,14 +19,12 @@
 // Defines
 //******************************************************************************
 /*! @brief Tag Main Machine tick period (in mS) */
-#define TMM_DEFAULT_TIMER_PERIOD_MS                 (250)
-
-#define TMM_DEFAULT_TIMER_RELOAD                    ((32768 * TMM_DEFAULT_TIMER_PERIOD_MS)/1000)
+#define TMM_RTCC_TIMER_PERIOD_MS                    (250)
+#define TMM_RTCC_TIMER_RELOAD                       ((32768 * TMM_RTCC_TIMER_PERIOD_MS)/1000)
 
 /*! @brief Tag Main Machine slow task tick period (in mS) */
-#define TMM_DEFAULT_SLOW_TIMER_PERIOD_MS            (1000)
-
-#define TMM_DEFAULT_SLOW_TIMER_RELOAD               (TMM_DEFAULT_SLOW_TIMER_PERIOD_MS / TMM_DEFAULT_TIMER_PERIOD_MS)
+#define TMM_SLOW_TASK_TIMER_PERIOD_MS               (1000)
+#define TMM_SLOW_TASK_TIMER_RELOAD                  (TMM_SLOW_TASK_TIMER_PERIOD_MS / TMM_RTCC_TIMER_PERIOD_MS)
 
 /*! @brief Tag Main Machine RTCC channel */
 #define TMM_RTCC_CC1                                (1)
