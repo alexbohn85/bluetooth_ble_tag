@@ -26,29 +26,26 @@
 // Defines
 //******************************************************************************
 
-#define LFM_WTA_DELAYED_CMD_EXEC_COUNTS        (3)                              // Number of WTA commands rx events before executing the command.
-
+// LF Commands definitions
 #define LF_CMD_NOP                             (0x00)
+#define LF_CMD_MT_BATT_LOW                     (0x1E)
+#define LF_CMD_MT                              (0x1F)
 
+// LF Exit timer
 #define LFM_TIMER_A_PERIOD_MS                  3000
 #define LFM_TIMER_A_PERIOD_RELOAD              (LFM_TIMER_A_PERIOD_MS / TMM_RTCC_TIMER_PERIOD_MS)
-
-#define LFM_TIMER_B_PERIOD_MS                  12000
-#define LFM_TIMER_B_PERIOD_RELOAD              (LFM_TIMER_B_PERIOD_MS / TMM_RTCC_TIMER_PERIOD_MS)
-
-#define LFM_TIMER_C_PERIOD_MS                  10000
-#define LFM_TIMER_C_PERIOD_RELOAD              (LFM_TIMER_C_PERIOD_MS / TMM_RTCC_TIMER_PERIOD_MS)
 
 //******************************************************************************
 // Data types
 //******************************************************************************
+enum lfm_exciter_types_t {
+    EXCITER_TE_PTE,
+    EXCITER_MOTHER_TAG,
+};
+
 typedef enum lfm_states_t {
     INIT,
     CHECK_EXIT_TIMEOUT,
-    CHECK_WTA_DELAYED_CMD_EXEC,
-    CHECK_NEW_LF_DATA,
-    CHECK_WTA_BACKOFF,
-    START_WTA_DELAYED_CMD_EXEC,
     PROCESS_TAG_IN_FIELD,
     EXIT
 } lfm_states_t;
@@ -56,8 +53,8 @@ typedef enum lfm_states_t {
 typedef struct lfm_data_t {
     uint8_t status;
     uint8_t wta_cmd_counter;
-    lf_decoder_data_t lf_data_0;  /* we use this to save new lf data */
-    lf_decoder_data_t lf_data_1;  /* we use this to store previous lf data */
+    lf_decoder_data_t buffer_0;  /* we use this to save new lf data */
+    lf_decoder_data_t buffer_1;  /* we use this to store previous lf data */
 } lfm_data_t;
 
 typedef struct lfm_fsm_t {
@@ -65,13 +62,10 @@ typedef struct lfm_fsm_t {
     lfm_states_t return_state;
 } lfm_fsm_t;
 
-
 //******************************************************************************
 // Global variables
 //******************************************************************************
 static tag_sw_timer_t timer_exit_field;
-static tag_sw_timer_t timer_staying_field;
-static tag_sw_timer_t timer_wta_backoff;
 static lfm_data_t lfm_data;
 static volatile lfm_fsm_t lfm_fsm;
 static volatile bool lfm_running;
@@ -85,57 +79,24 @@ static char* lfm_lf_events_to_string(lfm_lf_events_t event)
     switch (event) {
         case ENTERING_FIELD:
             return "Entering Field";
-            break;
+
         case EXITING_FIELD:
             return "Exiting Field";
-            break;
+
         case STAYING_FIELD:
             return "Staying in Field";
-            break;
-        case WTA_DELAYED_CMD_EXEC:
-            return "WTA Delayed Command Execution";
-            break;
+
+        case EXCITER_BATT_LOW:
+            return "Exciter Battery Low";
+
         default:
             return "Undefined LF event";
-            break;
     }
 }
 
 static void lfm_tick(void)
 {
     tag_sw_timer_tick(&timer_exit_field);
-    tag_sw_timer_tick(&timer_staying_field);
-    tag_sw_timer_tick(&timer_wta_backoff);
-}
-
-static void lfm_decode_wta_command(void)
-{
-    lfm_data.wta_cmd_counter = 0;                                               // Clear WTA delayed cmd exec. counter.
-    lfm_data.status &= ~(LFM_WTA_DELAYED_CMD_EXEC_FLAG);                        // Clear WTA delayed cmd exec. flag.
-    lfm_data.status |= LFM_WTA_BACKOFF_FLAG;                                    // Set WTA backoff flag (this will prevent executing same command over and over
-                                                                                // as WTA keeps sending it for 20 seconds. We could potentially disable LF decoder.
-
-    tag_sw_timer_reload(&timer_wta_backoff, LFM_TIMER_C_PERIOD_MS);             // Load WTA Backoff timer.
-    tag_sw_timer_reload(&timer_exit_field, 0);                                  // Stop Exit Field timer.
-
-    DEBUG_LOG(DBG_CAT_TAG_LF,"WTA Delayed Command Exec. Confirmed! Dispatching Command = 0x%.2X", lfm_data.lf_data_1.command);
-}
-
-static void lfm_process_delayed_cmd(void)
-{
-    if (lfm_data.lf_data_0.command == lfm_data.lf_data_1.command) {
-        lfm_data.wta_cmd_counter++;
-        if (lfm_data.wta_cmd_counter == LFM_WTA_DELAYED_CMD_EXEC_COUNTS) {
-            lfm_decode_wta_command();
-            lfm_fsm.state = EXIT;                                               // And exit.
-        } else {
-            tag_sw_timer_reload(&timer_exit_field, LFM_TIMER_A_PERIOD_RELOAD);  // Reload Exit Field timer.
-            lfm_fsm.state = EXIT;                                               // And exit.
-        }
-    } else {
-        lfm_fsm.state = CHECK_NEW_LF_DATA;
-        lfm_data.status &= ~(LFM_WTA_DELAYED_CMD_EXEC_FLAG);
-    }
 }
 
 static void lfm_fsm_start(void)
@@ -148,6 +109,46 @@ static void lfm_fsm_stop(void)
     lfm_running = false;
 }
 
+static void lfm_clear_status_flag(uint8_t flag)
+{
+    lfm_data.status &= ~(flag);
+}
+
+static void lfm_set_status_flag(uint8_t flag)
+{
+    lfm_data.status |= flag;
+}
+
+uint8_t lfm_get_exciter_type(uint8_t command)
+{
+    switch(command) {
+        case LF_CMD_NOP:
+            return EXCITER_TE_PTE;
+
+        case LF_CMD_MT_BATT_LOW:
+        case LF_CMD_MT:
+            return EXCITER_MOTHER_TAG;
+
+        default:
+            return EXCITER_TE_PTE;
+    }
+}
+
+static void lfm_build_lf_beacon(lfm_lf_events_t event)
+{
+    lf_beacon_data.lf_id_upper_bits = (lfm_data.buffer_1.id & 0x700) >> 8;
+    lf_beacon_data.lf_id_lower_bits = (lfm_data.buffer_1.id & 0xFF);
+    lf_beacon_data.lf_exciter_type = lfm_get_exciter_type(lfm_data.buffer_1.command);
+
+    // Check for any Battery Low LF commands and override the triggered event.
+    if (lfm_data.buffer_1.command == LF_CMD_MT_BATT_LOW) {
+        lf_beacon_data.lf_message_type = EXCITER_BATT_LOW;
+    } else {
+        // Case no Battery Low LF command is present keep the triggered event.
+        lf_beacon_data.lf_message_type = event;
+    }
+}
+
 /**
  * @brief This will prepare LF beacon data and send LF Event signal to Tag Beacon Machine (TBM)
  * @param event
@@ -155,19 +156,20 @@ static void lfm_fsm_stop(void)
 static void lfm_report_lf_event(lfm_lf_events_t event)
 {
     // Prepare LF beacon data.
-    lf_beacon_data.lf_data = lfm_data.lf_data_1;
-    lf_beacon_data.lf_event = event;
+    lfm_build_lf_beacon(event);
 
     if (event == STAYING_FIELD) {
+        // Send LF Field Message in sync with Tag Beacon Message (slow/fast)
         tbm_set_event(TBM_LF_EVT, false);
     } else {
+        // Send LF Field Message immediately
         tbm_set_event(TBM_LF_EVT, true);
     }
 
     DEBUG_LOG( DBG_CAT_TAG_LF,
-               "Dispatch LF Event to Tag Beacon Machine, LF ID: 0x%.4X LF CMD: 0x%.2X LF EVENT: %s",
-               lfm_data.lf_data_1.id,
-               lfm_data.lf_data_1.command,
+               "Dispatch LF Field ID: %.3X Exciter Type: 0x%.2X LF Message Type: %s",
+               lfm_data.buffer_1.id,
+               lfm_data.buffer_1.command,
                lfm_lf_events_to_string(event));
 }
 
@@ -181,92 +183,48 @@ static void lfm_process_step(void)
 //------------------------------------------------------------------------------
         case INIT:
             lfm_fsm_start();
-            lfm_data.lf_data_0.command = 0;
-            lfm_data.lf_data_0.id = 0;
+            lfm_data.buffer_0.command = 0;
+            lfm_data.buffer_0.id = 0;
             lfm_fsm.state = CHECK_EXIT_TIMEOUT;
+
             break;
 
 //------------------------------------------------------------------------------
         case CHECK_EXIT_TIMEOUT:
-            //! Check for exiting field timeout
-            if (tag_sw_timer_is_expired(&timer_exit_field)) {
-                lfm_report_lf_event(EXITING_FIELD);                             // Go process Exiting Field event
-                lfm_data.status &= ~(LFM_STAYING_IN_FIELD_FLAG);                // Clear Staying In Field flag
-                lfm_data.lf_data_1.command = 0;
-                lfm_data.lf_data_1.id = 0;
+
+            if (tag_sw_timer_is_expired(&timer_exit_field)) {                   // Check if exit field timer is expiring in this tick
+
+                lfm_report_lf_event(EXITING_FIELD);                             // If true, go Report LF event Exiting Field (async msg)
+                lfm_clear_status_flag(LFM_STAYING_IN_FIELD_FLAG);               // Clear LFM_STAYING_IN_FIELD_FLAG
+                lfm_data.buffer_1.command = 0;
+                lfm_data.buffer_1.id = 0;
                 lfm_fsm.state = EXIT;                                           // And exit.
+
             } else {
-                if (lf_decoder_is_data_available()) {                           // Check if LF decoder has decoded data available
-                    lf_decoder_get_lf_data(&lfm_data.lf_data_0);                // If true, go grab new LF decoded data
-                    lf_decoder_clear_lf_data();
-                    lfm_fsm.state = CHECK_WTA_DELAYED_CMD_EXEC;                 // And go check if there is a WTA delayed command exec. process
+
+                if (lf_decoder_is_data_available()) {                           // Check if LF decoder has new LF data available
+                    lf_decoder_get_lf_data(&lfm_data.buffer_0);                 // If true, grab new LF decoded data store buffer_0
+                    lfm_fsm.state = PROCESS_TAG_IN_FIELD;                       // Go process Tag in Field
                 } else {
-                    lfm_fsm.state = EXIT;
+                    lfm_fsm.state = EXIT;                                       // Or exit
                 }
             }
-            break;
-
-//------------------------------------------------------------------------------
-        case CHECK_WTA_DELAYED_CMD_EXEC:
-            if (lfm_data.status & LFM_WTA_DELAYED_CMD_EXEC_FLAG) {              // Check if we are currently in WTA delayed command execution
-                lfm_process_delayed_cmd();                                      // If true, go process the delayed command execution.
-            } else {
-                lfm_fsm.state = CHECK_NEW_LF_DATA;                              // If false, go process the new LF data.
-            }
-            break;
-
-//------------------------------------------------------------------------------
-        case CHECK_NEW_LF_DATA:
-            if (lfm_data.lf_data_0.command == LF_CMD_NOP) {                     // Check if this is just a Tag Exciter field (CMD = NOP(0x00))
-                lfm_fsm.state = PROCESS_TAG_IN_FIELD;                           // If true, this is just a regular Tag Exciter field, go process that.
-            } else {
-                lfm_fsm.state = CHECK_WTA_BACKOFF;                              // If false, this is a WTA field. Go check if WTA is in backoff timer.
-            }
-            break;
-
-//------------------------------------------------------------------------------
-        case CHECK_WTA_BACKOFF:
-            if (lfm_data.status & LFM_WTA_BACKOFF_FLAG) {                       // Check if we are waiting for WTA backoff timer to expire.
-                if (tag_sw_timer_is_expired(&timer_wta_backoff)) {              // If true, check if timer expired.
-                    lfm_data.status &= ~(LFM_WTA_BACKOFF_FLAG);                 // If so, clear WTA backoff flag
-                    lfm_fsm.state = START_WTA_DELAYED_CMD_EXEC;                 // And go start WTA delayed command exec.
-                } else {
-                    DEBUG_LOG(DBG_CAT_TAG_LF, "WTA Back-off timer is still running..");   // If timer is still running just ignore this command.
-                    lfm_fsm.state = EXIT;                                                 // And exit.
-                }
-            } else {
-                lfm_data.status |= LFM_WTA_BACKOFF_FLAG;
-                tag_sw_timer_reload(&timer_wta_backoff, LFM_TIMER_C_PERIOD_MS);
-            }
-            break;
-
-//------------------------------------------------------------------------------
-        case START_WTA_DELAYED_CMD_EXEC:
-
-            lfm_data.status |= LFM_WTA_DELAYED_CMD_EXEC_FLAG;                   // Set WTA delayed command execution flag.
-            lfm_data.wta_cmd_counter = 0;                                       // Reset WTA delayed command execution counter
-            lfm_data.lf_data_1 = lfm_data.lf_data_0;                            // Buffer the new LF data.
-            lfm_report_lf_event(WTA_DELAYED_CMD_EXEC);                          // Report LF event Delayed LF Command.
-            tag_sw_timer_reload(&timer_exit_field, LFM_TIMER_A_PERIOD_RELOAD);  // Load Exit Field Timeout timer.
-            lfm_fsm.state = EXIT;                                               // And exit.
 
             break;
 
 //------------------------------------------------------------------------------
         case PROCESS_TAG_IN_FIELD:
-            if (lfm_data.lf_data_0.id == lfm_data.lf_data_1.id) {                          // Check if new LF data is from same LF ID
-               lfm_data.status |= LFM_STAYING_IN_FIELD_FLAG;                               // Set Staying in Field flag
-                if (tag_sw_timer_is_stopped(&timer_staying_field)) {                       // Check if Staying in Field timer is stopped.
-                    tag_sw_timer_reload(&timer_staying_field, LFM_TIMER_B_PERIOD_RELOAD);  // Reload Exit Field timer.
-                }
+
+            if (lfm_data.buffer_0.id == lfm_data.buffer_1.id) {                   // Check if we are in the same LF Field ID as before
+                lfm_report_lf_event(STAYING_FIELD);                               // Report LF event Staying in Field to Tag Beacon Machine (sync msg)
+                lfm_set_status_flag(LFM_STAYING_IN_FIELD_FLAG);                   // If not, then set LFM_STAYING_IN_FIELD_FLAG
             } else {
-                lfm_data.lf_data_1 = lfm_data.lf_data_0;                                   // If different, buffer the new LF data.
-                tag_sw_timer_reload(&timer_staying_field, LFM_TIMER_B_PERIOD_RELOAD);      // Reload Staying in Field timer.
-                lfm_report_lf_event(ENTERING_FIELD);                                       // Report LF event Entering Field.
+                lfm_data.buffer_1 = lfm_data.buffer_0;                            // If different, buffer the new LF data.
+                lfm_report_lf_event(ENTERING_FIELD);                              // Report LF event Entering Field (async msg)
             }
 
-            tag_sw_timer_reload(&timer_exit_field, LFM_TIMER_A_PERIOD_RELOAD);             // If true, load it.
-            lfm_fsm.state = EXIT;                                                          // And exit.
+            tag_sw_timer_reload(&timer_exit_field, LFM_TIMER_A_PERIOD_RELOAD);    // Reload Exiting Field timeout
+            lfm_fsm.state = EXIT;                                                 // And exit.
 
             break;
 
@@ -307,28 +265,19 @@ void lf_run(void)
     lfm_tick();
 
     lfm_fsm.state = INIT;
-    // reset lfm state machine process
-    lfm_running = false;
 
     // Run lf machine process until completion
     do {
         lfm_process_step();
     } while (lfm_running);
-
-    // Check if we need to send "Staying in Field" LF Beacon
-    if (tag_sw_timer_is_expired(&timer_staying_field)) {
-        if (lfm_data.status & LFM_STAYING_IN_FIELD_FLAG) {
-            lfm_report_lf_event(STAYING_FIELD);
-        }
-    }
 }
 
 //! @brief LF Machine Init
 uint32_t lfm_init(void)
 {
     tag_sw_timer_reload(&timer_exit_field, 0);
-    tag_sw_timer_reload(&timer_staying_field, 0);
-    tag_sw_timer_reload(&timer_wta_backoff, 0);
     lfm_fsm.state = INIT;
+    lfm_fsm_stop();
+
     return 0;
 }

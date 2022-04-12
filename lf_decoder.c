@@ -182,6 +182,7 @@ void lf_decoder_get_lf_data(lf_decoder_data_t *dest)
     dest->is_available = lf_data.is_available;
     dest->command = lf_data.command;
     dest->id = lf_data.id;
+    lf_decoder_clear_lf_data();
 
     CORE_EXIT_ATOMIC();
 }

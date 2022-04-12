@@ -193,10 +193,8 @@ static void tbm_send_lf_beacon(void)
         lfm_lf_beacon_t *data = lfm_get_beacon_data();
         bmm_msg_t msg;
         msg.type = BLE_MSG_LF_FIELD;
-        msg.data[i++] = data->lf_event;
-        msg.data[i++] = (data->lf_data.id >> 8);
-        msg.data[i++] = (data->lf_data.id);
-        msg.data[i++] = data->lf_data.command;
+        msg.data[i++] = data->lf_data[0];
+        msg.data[i++] = data->lf_data[1];
         msg.length = i + 1;
 
         // Send msg to BLE Manager queue and clear TBM event.
@@ -369,6 +367,7 @@ void tag_beacon_run(void)
 
         // Check if there are async or sync tag beacon events
         if ((tbm_status.event_async_flag != 0) || ( tag_sw_timer_is_expired(&tbm_beacon_timer))) {
+
             // First add Tag Status Message (this message is present on every single transmission)
             // This message also handles some tag features events like tamper, battery low, motion, ambient light sensor, etc.
             tbm_send_tag_status_beacon();
