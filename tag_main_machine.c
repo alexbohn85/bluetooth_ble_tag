@@ -3,12 +3,11 @@
  * @brief Tag Main Machine
  *
  * Here are all the Tag functionalities state machines. Main routine "tag_main_run"
- * runs every TMM_DEFAULT_TIMER_PERIOD_MS millisecond based on RTCC timer.
+ * runs every TMM_RTCC_TIMER_PERIOD_MS millisecond based on RTCC timer.
  * It is cooperative multitasking which means every Machine called is responsible
  * to yield back to the main machine super loop.
  */
 
-#include <tag_status_fw_machine.h>
 #include "stdio.h"
 #include "stdbool.h"
 
@@ -22,7 +21,6 @@
 #include "sl_power_manager_debug.h"
 #include "app_assert.h"
 
-
 #include "dbg_utils.h"
 #include "tag_power_manager.h"
 #include "tag_sw_timer.h"
@@ -34,6 +32,7 @@
 #include "tag_uptime_machine.h"
 #include "ble_manager_machine.h"
 #include "tag_main_machine.h"
+#include "tag_status_fw_machine.h"
 
 
 //******************************************************************************
@@ -67,7 +66,7 @@ static void tmm_set_mode(tmm_modes_t state)
 static void tmm_rtcc_update(void)
 {
     // Update Tag Main Machine RTCC CC1 value (for next tick)
-    uint32_t timer_offset = ((uint32_t)TMM_DEFAULT_TIMER_RELOAD) + RTCC_CounterGet();
+    uint32_t timer_offset = ((uint32_t)TMM_RTCC_TIMER_RELOAD) + RTCC_CounterGet();
     RTCC_ChannelCompareValueSet(TMM_RTCC_CC1, timer_offset);
 }
 
@@ -83,7 +82,7 @@ static void tmm_slow_tasks_run(void)
     if (tag_sw_timer_is_expired(&tmm_slow_timer)) {
 
         // Reload Slow Task Timer
-        tag_sw_timer_reload(&tmm_slow_timer, TMM_DEFAULT_SLOW_TIMER_RELOAD);
+        tag_sw_timer_reload(&tmm_slow_timer, TMM_SLOW_TASK_TIMER_RELOAD);
 
         //**********************************************************************
         // Add below all slow tasks (tick at tmm_slow_timer)
@@ -106,7 +105,7 @@ static void tmm_slow_tasks_run(void)
     }
 }
 
-//! @brief It calls all the machine init routines.
+//! @brief It calls all the tag machines "init" routines.
 static uint32_t tmm_init_machines(void)
 {
     uint32_t status = 0;
@@ -124,16 +123,18 @@ static uint32_t tmm_init_machines(void)
     return status;
 }
 
-//! @brief Start Tag Main Machine Process
+/**
+ * @brief Init Tag Main Machine
+ */
 static void tmm_init(tmm_modes_t mode)
 {
 
-    // Initiate TTM mode and machines
+    // Initiate Tag Main Machine "superloop" and Tag Application "tasks"
     tmm_set_mode(mode);
     tmm_init_machines();
 
-    // Initiate sw timer for slow tasks machines
-    tag_sw_timer_reload(&tmm_slow_timer, TMM_DEFAULT_SLOW_TIMER_RELOAD);
+    // Initiate sw timer for slow tasks
+    tag_sw_timer_reload(&tmm_slow_timer, TMM_SLOW_TASK_TIMER_RELOAD);
 
     // Setup RTCC CC1 Channel for Tag Main Machine SysTick
     RTCC_CCChConf_TypeDef cc1_cfg = RTCC_CH_INIT_COMPARE_DEFAULT;
@@ -145,7 +146,7 @@ static void tmm_init(tmm_modes_t mode)
     RTCC_ChannelInit(TMM_RTCC_CC1, &cc1_cfg);
 
     // Initiate RTCC CC1 Compare value
-    uint32_t timer_offset = ((uint32_t)TMM_DEFAULT_TIMER_RELOAD) + RTCC_CounterGet();
+    uint32_t timer_offset = ((uint32_t)TMM_RTCC_TIMER_RELOAD) + RTCC_CounterGet();
     RTCC_ChannelCompareValueSet(TMM_RTCC_CC1, timer_offset);
 
     // Enable NVIC and RTCC CC1 Interrupt
@@ -160,10 +161,14 @@ static void tmm_init(tmm_modes_t mode)
 //******************************************************************************
 /*!  @brief Tag Main Machine running on RTCC CC Channel 1
  *   @details Tag Main Machine "super loop" entry point. This routine will be called on RTCC
- *       CC1 compare interrupt to process all the synchronous and asynchronous
- *       events. Each feature will have its own machines that will be called
+ *       CC1 compare interrupt to process all the synchronous(FW) and asynchronous(HW)
+ *       events. Each tag feature should have its own machine "task" that will be called
  *       within this ISRs context. The main tick period is defined at @ref
- *       TMM_DEFAULT_TIMER_PERIOD_MS.
+ *       TMM_RTCC_TIMER_PERIOD_MS.
+ *
+ *   @note Concept of "task" here is not the same as an RTOS so make sure each call
+ *       runs efficiently and fair sharing cpu time.
+ *
 *******************************************************************************/
 void tag_main_machine_isr(void)
 {
@@ -180,12 +185,11 @@ void tag_main_machine_isr(void)
             //------------------------------------------------------------------
             // Keep below calls together in this order.
             //------------------------------------------------------------------
-
             // Check for all Beacon Events and dispatch messages to BLE Manager Queue
             tag_beacon_run();
-
             // Build packet and transmit BLE Advertising Beacons
             ble_manager_run();
+
             break;
 
         case TMM_PAUSED:
@@ -201,8 +205,8 @@ void tag_main_machine_isr(void)
     // Update TMM RTCC Counter Value (next tick)
     tmm_rtcc_update();
 
-    // If BLE is not running we can skip going into main context by allowing power manager to return
-    // to low power mode at the end of ISRs.
+    // If BLE is not running we can skip going into main context after this ISR
+    // by allowing power manager to return to low power mode at the end of ISRs.
     if (bmm_adv_running) {
         tag_sleep_on_isr_exit(false);
     } else {
@@ -231,24 +235,22 @@ void tmm_resume(void)
     tmm_current_mode = tmm_stored_mode;
 }
 
-//! @brief Start Tag Main Machine
+/**
+ * @brief Start Tag Main Machine
+ * @param mode
+ */
 void tmm_start(tmm_modes_t mode)
 {
     DEBUG_LOG(DBG_CAT_TAG_MAIN, "Starting Tag Main Machine process...");
     tmm_init(mode);
 }
 
-//! @brief Get Tag Main Machine main tick period
 uint32_t tmm_get_tick_period_ms(void)
 {
-    return (uint32_t)TMM_DEFAULT_TIMER_PERIOD_MS;
+    return (uint32_t)TMM_RTCC_TIMER_PERIOD_MS;
 }
 
-//! @brief Get Tag Main Machine slow task tick period
 uint32_t tmm_get_slow_tick_period(void)
 {
-    return (uint32_t)TMM_DEFAULT_SLOW_TIMER_PERIOD_MS;
+    return (uint32_t)TMM_SLOW_TASK_TIMER_PERIOD_MS;
 }
-
-
-

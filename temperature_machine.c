@@ -80,15 +80,17 @@ void temperature_run(void)
     // Tick Temperature Report Timer
     tag_sw_timer_tick(&ttm_report_timer);
 
-    // Measure SoC temperature every TTM_TIMER_PERIOD_SEC seconds and
-    // Send Tag Temperature Beacon event to Tag Beacon Machine.
+    // Measure SoC temperature and send Tag Temperature Beacon event to Tag Beacon Machine.
     if (tag_sw_timer_is_expired(&ttm_report_timer)) {
 
         // Read current temperature.
         ttm_read_temperature();
 
-        // Send an Async Temperature Beacon event to Tag Beacon Machine
-        tbm_set_event(TBM_TEMPERATURE_EVT, true);
+        // Send an Async Temperature Beacon event to Tag Beacon Machine (this message will be sent immediately)
+        //tbm_set_event(TBM_TEMPERATURE_EVT, true);
+
+        // Send an Sync Temperature Beacon event to Tag Beacon Machine (this message will synchronize with the slow or fast beacon rate)
+        tbm_set_event(TBM_TEMPERATURE_EVT, false);
 
         // Reload TTM Report Timer
         tag_sw_timer_reload(&ttm_report_timer, TTM_TIMER_PERIOD_SEC_RELOAD);

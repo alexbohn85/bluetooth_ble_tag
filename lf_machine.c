@@ -31,13 +31,13 @@
 #define LF_CMD_NOP                             (0x00)
 
 #define LFM_TIMER_A_PERIOD_MS                  3000
-#define LFM_TIMER_A_PERIOD_RELOAD              (LFM_TIMER_A_PERIOD_MS / TMM_DEFAULT_TIMER_PERIOD_MS)
+#define LFM_TIMER_A_PERIOD_RELOAD              (LFM_TIMER_A_PERIOD_MS / TMM_RTCC_TIMER_PERIOD_MS)
 
 #define LFM_TIMER_B_PERIOD_MS                  12000
-#define LFM_TIMER_B_PERIOD_RELOAD              (LFM_TIMER_B_PERIOD_MS / TMM_DEFAULT_TIMER_PERIOD_MS)
+#define LFM_TIMER_B_PERIOD_RELOAD              (LFM_TIMER_B_PERIOD_MS / TMM_RTCC_TIMER_PERIOD_MS)
 
 #define LFM_TIMER_C_PERIOD_MS                  10000
-#define LFM_TIMER_C_PERIOD_RELOAD              (LFM_TIMER_C_PERIOD_MS / TMM_DEFAULT_TIMER_PERIOD_MS)
+#define LFM_TIMER_C_PERIOD_RELOAD              (LFM_TIMER_C_PERIOD_MS / TMM_RTCC_TIMER_PERIOD_MS)
 
 //******************************************************************************
 // Data types

@@ -90,8 +90,8 @@ void dbg_print_banner(void)
 
     printf(COLOR_B_WHITE "%35s | %s\n", "Logs", (dbg_is_log_enabled() ? COLOR_B_GREEN "On" : COLOR_B_RED "Off"));
     printf(COLOR_B_WHITE "%35s | %s\n", "Traps", (dbg_is_trap_enabled() ? COLOR_B_GREEN "On" : COLOR_B_RED "Off"));
-    printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d msec\n", "TMM Tick", TMM_DEFAULT_TIMER_PERIOD_MS);
-    printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d msec\n", "TTM Slow Tasks Tick", TMM_DEFAULT_SLOW_TIMER_PERIOD_MS);
+    printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d msec\n", "TMM Tick", TMM_RTCC_TIMER_PERIOD_MS);
+    printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d msec\n", "TTM Slow Tasks Tick", TMM_SLOW_TASK_TIMER_PERIOD_MS);
     printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d sec\n", "Beacon Rate (Fast)", TBM_FAST_BEACON_RATE_SEC);
     printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d sec\n", "Beacon Rate (Slow)", TBM_SLOW_BEACON_RATE_SEC);
     printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d sec\n", "Temperature Report Rate", (int)(TTM_TIMER_PERIOD_SEC_RELOAD));

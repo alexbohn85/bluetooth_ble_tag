@@ -16,13 +16,13 @@
 // Defines
 //******************************************************************************
 #define TBM_INIT_BEACON_RATE_SEC              (3)                               // Init value (only first time)
-#define TBM_INIT_BEACON_RATE_SEC_RELOAD       ((TBM_INIT_BEACON_RATE_SEC * 1000) / TMM_DEFAULT_TIMER_PERIOD_MS)
+#define TBM_INIT_BEACON_RATE_SEC_RELOAD       ((TBM_INIT_BEACON_RATE_SEC * 1000) / TMM_RTCC_TIMER_PERIOD_MS)
 
 #define TBM_FAST_BEACON_RATE_SEC              (12)                              // When tag is in certain states (e.g Staying In Field, Tamper Alert, Man Down, etc)
-#define TBM_FAST_BEACON_RATE_RELOAD           ((TBM_FAST_BEACON_RATE_SEC * 1000) / TMM_DEFAULT_TIMER_PERIOD_MS)
+#define TBM_FAST_BEACON_RATE_RELOAD           ((TBM_FAST_BEACON_RATE_SEC * 1000) / TMM_RTCC_TIMER_PERIOD_MS)
 
 #define TBM_SLOW_BEACON_RATE_SEC              (600)                             // Default is 10 minutes
-#define TBM_SLOW_BEACON_RATE_RELOAD           ((TBM_SLOW_BEACON_RATE_SEC * 1000) / TMM_DEFAULT_TIMER_PERIOD_MS)
+#define TBM_SLOW_BEACON_RATE_RELOAD           ((TBM_SLOW_BEACON_RATE_SEC * 1000) / TMM_RTCC_TIMER_PERIOD_MS)
 
 //******************************************************************************
 // Data types
