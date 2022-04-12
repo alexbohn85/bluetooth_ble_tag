@@ -64,12 +64,12 @@ typedef struct bmm_msg_t {
 
 /** BLE Advertising Types (Generic Access Profile) **/
 typedef enum bmm_ble_adv_types_t {
-    ADV_TYPE_FLAGS = 0x01,
-    ADV_TYPE_SHORTENED_LOCAL_NAME = 0x08,
-    ADV_TYPE_COMPLETE_LOCAL_NAME = 0x09,
-    ADV_TYPE_UUID_16_SERVICE_DATA = 0x16,
-    ADV_TYPE_TX_POWER_LEVEL = 0x0A,
-    ADV_TYPE_MANUF_SPEC_DATA = 0xFF
+    ADV_FLAGS = 0x01,
+    ADV_SHORTENED_LOCAL_NAME = 0x08,
+    ADV_COMPLETE_LOCAL_NAME = 0x09,
+    ADV_SERVICE_DATA = 0x16,
+    ADV_TX_POWER_LEVEL = 0x0A,
+    ADV_MANU_SPEC_DATA = 0xFF
 } bmm_ble_adv_types_t;
 
 //******************************************************************************
