@@ -18,8 +18,8 @@
 #define TMM_TAG_FW_REV_PERIOD_SEC_INIT                 (1)
 
 #if defined(TAG_DEV_MODE_PRESENT)
-#define TMM_TAG_EXT_STATUS_PERIOD_SEC                  (12)                    // Reload Period for Tag Extended Status Beacon sent every 2 minutes
-#define TMM_TAG_FW_REV_PERIOD_SEC                      (24)                    // Reload Period for Tag Firmware Revision Beacon sent every 4 minutes
+#define TMM_TAG_EXT_STATUS_PERIOD_SEC                  (120)                    // Reload Period for Tag Extended Status Beacon sent every 2 minutes
+#define TMM_TAG_FW_REV_PERIOD_SEC                      (180)                    // Reload Period for Tag Firmware Revision Beacon sent every 4 minutes
 #else
 #define TMM_TAG_EXT_STATUS_PERIOD_SEC                  (1800)                   // Reload Period for Tag Extended Status Beacon sent every 30 minutes
 #define TMM_TAG_FW_REV_PERIOD_SEC                      (1800)                   // Reload Period for Tag Firmware Revision Beacon sent every 30 minutes

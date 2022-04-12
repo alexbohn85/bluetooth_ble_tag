@@ -179,7 +179,7 @@ void tag_main_machine_isr(void)
     {
         case TMM_RUNNING:
 
-            lfm_run();
+            lf_run();
             tmm_slow_tasks_run();
 
             //------------------------------------------------------------------
