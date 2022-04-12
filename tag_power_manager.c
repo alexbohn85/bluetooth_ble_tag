@@ -34,6 +34,13 @@ volatile bool sleep_on_isr_exit;
 //******************************************************************************
 // Static functions
 //******************************************************************************
+static void tpm_delay_system_reset(sl_sleeptimer_timer_handle_t *handle, void *data)
+{
+    (void)(data);
+    (void)(handle);
+
+    NVIC_SystemReset();
+}
 
 //******************************************************************************
 // Non Static functions
@@ -54,12 +61,15 @@ void EMU_EFPEM23PostsleepHook(void)
     /** Add debug code here.. **/
 }
 
-static void tpm_delay_system_reset(sl_sleeptimer_timer_handle_t *handle, void *data)
-{
-    (void)(data);
-    (void)(handle);
 
-    NVIC_SystemReset();
+void tpm_schedule_system_reset(uint32_t timeout_ms)
+{
+    sl_sleeptimer_start_timer_ms( &tpm_sleeptimer,
+                                  timeout_ms,
+                                  tpm_delay_system_reset,
+                                  (void*)NULL,
+                                  0,
+                                  0);
 }
 
 /**
@@ -88,12 +98,7 @@ void tpm_enter_current_draw_mode(uint32_t reset_delay_ms)
     cli_stop();
 
     if (reset_delay_ms > 0) {
-        sl_sleeptimer_start_timer_ms( &tpm_sleeptimer,
-                                      reset_delay_ms,
-                                      tpm_delay_system_reset,
-                                      (void*)NULL,
-                                      0,
-                                      0);
+        tpm_schedule_system_reset(reset_delay_ms);
         //printf(COLOR_B_WHITE"\n\n-> Entering current draw mode... MCU will reset in %d ms\n", reset_delay_ms);
     } else {
         //printf(COLOR_B_WHITE"\n\n-> Entering current draw mode... HW Reset exit current draw mode\n");

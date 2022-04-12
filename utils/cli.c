@@ -140,7 +140,8 @@ static void cli_process_manufacturing_command(void)
 
         if(cli_decode_mac_addr() == 0) {
             SEND_RSP(DATA_ACK);
-            DEBUG_LOG(DBG_CAT_CLI, "New MAC was saved into NVM...");
+            DEBUG_LOG(DBG_CAT_CLI, "New MAC was saved into NVM... rebooting to apply new settings");
+            tpm_schedule_system_reset(1000);
         } else {
             SEND_RSP(DATA_NAK);
             DEBUG_LOG(DBG_CAT_CLI, "Syntax error... expected MAC address format -> XX:XX:XX:XX:XX:XX");
@@ -281,7 +282,8 @@ static void cli_process_command(void)
     // write/read custom MAC address to NVM ------------------------------------
     } else if (strstr(cmd.data, "write mac") != NULL) {
         if(cli_decode_mac_addr() == 0) {
-            DEBUG_LOG(DBG_CAT_CLI, "New MAC was saved into NVM...");
+            DEBUG_LOG(DBG_CAT_CLI, "New MAC was saved into NVM... rebooting to apply new settings");
+            tpm_schedule_system_reset(1000);
         } else {
             DEBUG_LOG(DBG_CAT_CLI, "Syntax error... expected MAC address format -> XX:XX:XX:XX:XX:XX");
         }
