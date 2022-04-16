@@ -147,7 +147,9 @@ static void lf_decoder_capture_start(void)
 {
     decoder.state = PREAMBLE;
     lf_decoder_rtcc_cc0_config(LF_RTCC_CAPTURE, 0, rtccInEdgeRising);
+#if (TAG_ID == UT3_ID)
     as39_antenna_enable(true, false, false);
+#endif
 }
 
 static void lf_decoder_reset_and_backoff(uint32_t timeout)
