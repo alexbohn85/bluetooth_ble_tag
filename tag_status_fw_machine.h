@@ -13,10 +13,11 @@
 //******************************************************************************
 // Defines
 //******************************************************************************
-// Start-up values for Tag Extended Staus and Firmware Revision beacon rates
-#define TMM_TAG_EXT_STATUS_PERIOD_SEC_INIT             (1)
-#define TMM_TAG_FW_REV_PERIOD_SEC_INIT                 (1)
+// Initial values for Tag Extended Status and Firmware Revision beacon rates (these values are only used for start-up so messages are pushed right away once tag is powered)
+#define TMM_TAG_EXT_STATUS_PERIOD_SEC_STARTUP_ONLY             (1)
+#define TMM_TAG_FW_REV_PERIOD_SEC_STARTUP_ONLY                 (1)
 
+// Reload values for Tag Extended Status and Firmware Revision beacon rates.
 #if defined(TAG_DEV_MODE_PRESENT)
 #define TMM_TAG_EXT_STATUS_PERIOD_SEC                  (120)                    // Reload Period for Tag Extended Status Beacon sent every 2 minutes
 #define TMM_TAG_FW_REV_PERIOD_SEC                      (180)                    // Reload Period for Tag Firmware Revision Beacon sent every 4 minutes

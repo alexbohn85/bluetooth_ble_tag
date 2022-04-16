@@ -4,7 +4,6 @@
  */
 
 
-#include <tag_status_fw_machine.h>
 #include "stdio.h"
 #include "string.h"
 #include "stdbool.h"
@@ -18,6 +17,7 @@
 #include "tag_beacon_machine.h"
 #include "tag_sw_timer.h"
 #include "version.h"
+#include "tag_status_fw_machine.h"
 
 //******************************************************************************
 // Defines
@@ -174,10 +174,10 @@ uint32_t tsm_init(void)
     tsm_update_tag_extended_status();
 
     // Init Tag Extended Status Report Timer
-    tag_sw_timer_reload(&extended_status_timer, TMM_TAG_EXT_STATUS_PERIOD_SEC_INIT);
+    tag_sw_timer_reload(&extended_status_timer, TMM_TAG_EXT_STATUS_PERIOD_SEC_STARTUP_ONLY);
 
     // Init Tag Firmware Rev Report Timer
-    tag_sw_timer_reload(&fw_revision_timer, TMM_TAG_FW_REV_PERIOD_SEC_INIT);
+    tag_sw_timer_reload(&fw_revision_timer, TMM_TAG_FW_REV_PERIOD_SEC_STARTUP_ONLY);
 
     return 0;
 }
