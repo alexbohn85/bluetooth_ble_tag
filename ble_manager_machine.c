@@ -37,9 +37,13 @@
 #define ADV_MIN_INTERVAL             (50)
 #define ADV_MAX_INTERVAL             (100)
 
-// Manufacturer Specific Data UUID
-#define UUID_GUARD_L                 0x16
-#define UUID_GUARD_H                 0x0B
+// UUID Service Data for GuardRFID
+#define UUID_SD_GUARD_L              0xE6
+#define UUID_SD_GUARD_H              0xFC
+// UUID Manufacturer Specific Data for GuardRFID
+#define UUID_MSD_GUARD_L             0x16
+#define UUID_MSD_GUARD_H             0x0B
+
 #define UUID_TEST_L                  0xFF
 #define UUID_TEST_H                  0xFF
 
@@ -304,11 +308,11 @@ static void bmm_process_packet_aggregation(uint8_t *pdu_len, uint8_t *userdata_l
 
 }
 /**
- * @brief Append Manufacturer Spec. Data into the ADV_PDU
+ * @brief Append Tag Data into the ADV_PDU
  * @details This function will try to fit "aggregate" as many beacon messages as possible in the ADV_PAYLOAD.
  * @param pdu_len variable holding PDU length counter
  */
-static void bmm_append_man_spec_data(uint8_t *pdu_len)
+static void bmm_append_tag_data(uint8_t *pdu_len, bmm_ble_adv_types_t ad_type)
 {
     // Save current index position, we will use this later when packet aggregation is done.
     uint8_t man_spec_data_len_index = (*pdu_len);
@@ -316,12 +320,21 @@ static void bmm_append_man_spec_data(uint8_t *pdu_len)
 
     // Fill in all Manufacturer Specific Data fields
     adv_payload.data[(*pdu_len)++] = 0;                                         // placeholder for the length once we finish packet assembly.
-    adv_payload.data[(*pdu_len)++] = ADV_MANU_SPEC_DATA;                        // ADV type id
+    adv_payload.data[(*pdu_len)++] = ad_type;                                   // ADV type id
     man_spec_data_len++;
-    adv_payload.data[(*pdu_len)++] = UUID_GUARD_L;                              // Manufacturer 16-bits UUID (little-endian)
-    man_spec_data_len++;
-    adv_payload.data[(*pdu_len)++] = UUID_GUARD_H;
-    man_spec_data_len++;
+    if (ad_type == ADV_MANU_SPEC_DATA) {
+        adv_payload.data[(*pdu_len)++] = UUID_MSD_GUARD_L;                      // GuardRFID 16-bits UUID for MSD (little-endian)
+        man_spec_data_len++;
+        adv_payload.data[(*pdu_len)++] = UUID_MSD_GUARD_H;
+        man_spec_data_len++;
+
+    } else if (ad_type == ADV_SERVICE_DATA) {
+        adv_payload.data[(*pdu_len)++] = UUID_SD_GUARD_L;                       // GuardRFID 16-bits UUID for SD (little-endian)
+        man_spec_data_len++;
+        adv_payload.data[(*pdu_len)++] = UUID_SD_GUARD_H;
+        man_spec_data_len++;
+    }
+
     adv_payload.data[(*pdu_len)++] = TAG_ID;                                    // BLE Tag Type ID
     man_spec_data_len++;
 
@@ -358,8 +371,11 @@ static uint32_t bmm_process_msg_events(void)
         // Append Complete Local Name
         bmm_append_adv_complete_local_name(&pdu_len);
 
-        // Append Manufacturer Specific Data
-        bmm_append_man_spec_data(&pdu_len);
+        // Append Manufacturer Specific Data (MSD)
+        bmm_append_tag_data(&pdu_len, ADV_MANU_SPEC_DATA);
+
+        // Append Service Data (SD)
+        //bmm_append_tag_data(&pdu_len, ADV_SERVICE_DATA);
 
         status = 0;
 
