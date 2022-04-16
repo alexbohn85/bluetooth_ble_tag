@@ -100,7 +100,7 @@ void tag_uptime_run(void)
 
 uint32_t tum_init(void)
 {
-    tag_sw_timer_reload(&uptime_report_tmr, TUM_TIMER_PERIOD_SEC_INIT);
+    tag_sw_timer_reload(&uptime_report_tmr, TUM_TIMER_PERIOD_SEC);
     return 0;
 }
 
