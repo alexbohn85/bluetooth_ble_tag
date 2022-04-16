@@ -27,9 +27,12 @@
 //******************************************************************************
 
 // LF Commands definitions
+#define TA_CONFIRM_CMD_N_TIMES                 3       /* Protocol to confirm TA command, tag needs to receive
+                                                          same command "n" times in a row before it can execute */
 #define LF_CMD_NOP                             (0x00)
 #define LF_CMD_MT_BATT_LOW                     (0x1E)
 #define LF_CMD_MT                              (0x1F)
+#define LF_WAKEUP_FROM_DEEP_SLEEP              (0xFF)  //placeholder value here
 
 // LF Exit timer
 #define LFM_TIMER_A_PERIOD_MS                  3000
@@ -47,12 +50,14 @@ typedef enum lfm_states_t {
     INIT,
     CHECK_EXIT_TIMEOUT,
     PROCESS_TAG_IN_FIELD,
+    DECODE_COMMAND,
     EXIT
 } lfm_states_t;
 
 typedef struct lfm_data_t {
     uint8_t status;
     uint8_t wta_cmd_counter;
+    uint8_t wta_cmd;
     lf_decoder_data_t buffer_0;  /* we use this to save new lf data */
     lf_decoder_data_t buffer_1;  /* we use this to store previous lf data */
 } lfm_data_t;
@@ -74,6 +79,45 @@ static lfm_lf_beacon_t lf_beacon_data;
 //******************************************************************************
 // Static functions
 //******************************************************************************
+static void lfm_clear_status_flag(uint8_t flag)
+{
+    lfm_data.status &= ~(flag);
+}
+
+static void lfm_set_status_flag(uint8_t flag)
+{
+    lfm_data.status |= flag;
+}
+
+static void lfm_dispatch_command(uint8_t lf_command)
+{
+    switch(lf_command) {
+        case LF_CMD_NOP:
+            DEBUG_LOG(DBG_CAT_TAG_LF, "COMMAND HAS BEEN CONFIRMED");
+            break;
+        default:
+            break;
+    }
+}
+
+static void lfm_decode_command(uint8_t lf_command)
+{
+    if (lfm_data.wta_cmd == lf_command) {
+        DEBUG_LOG(DBG_CAT_TAG_LF, "wta_cmd_counter = %d", (int)lfm_data.wta_cmd_counter);
+        lfm_data.wta_cmd_counter++;
+    } else {
+        lfm_data.wta_cmd = lf_command;
+        lfm_data.wta_cmd_counter = 0;
+    }
+
+    if (lfm_data.wta_cmd_counter == TA_CONFIRM_CMD_N_TIMES) {
+        lfm_data.wta_cmd = 0;
+        lfm_data.wta_cmd_counter = 0;
+        lfm_clear_status_flag(LFM_WTA_DELAYED_CMD_EXEC_FLAG);
+        lfm_dispatch_command(lf_command);
+    }
+}
+
 static char* lfm_lf_events_to_string(lfm_lf_events_t event)
 {
     switch (event) {
@@ -109,15 +153,7 @@ static void lfm_fsm_stop(void)
     lfm_running = false;
 }
 
-static void lfm_clear_status_flag(uint8_t flag)
-{
-    lfm_data.status &= ~(flag);
-}
 
-static void lfm_set_status_flag(uint8_t flag)
-{
-    lfm_data.status |= flag;
-}
 
 uint8_t lfm_get_exciter_type(uint8_t command)
 {
@@ -216,16 +252,43 @@ static void lfm_process_step(void)
         case PROCESS_TAG_IN_FIELD:
 
             if (lfm_data.buffer_0.id == lfm_data.buffer_1.id) {                   // Check if we are in the same LF Field ID as before
+                lfm_data.buffer_1 = lfm_data.buffer_0;                            // Buffer new data
                 lfm_report_lf_event(STAYING_FIELD);                               // Report LF event Staying in Field to Tag Beacon Machine (sync msg)
-                lfm_set_status_flag(LFM_STAYING_IN_FIELD_FLAG);                   // If not, then set LFM_STAYING_IN_FIELD_FLAG
+                lfm_set_status_flag(LFM_STAYING_IN_FIELD_FLAG);                   // Set LF status flag "Staying in Field"
             } else {
-                lfm_data.buffer_1 = lfm_data.buffer_0;                            // If different, buffer the new LF data.
+                lfm_data.buffer_1 = lfm_data.buffer_0;                            // Buffer new data
                 lfm_report_lf_event(ENTERING_FIELD);                              // Report LF event Entering Field (async msg)
             }
 
             tag_sw_timer_reload(&timer_exit_field, LFM_TIMER_A_PERIOD_RELOAD);    // Reload Exiting Field timeout
-            lfm_fsm.state = EXIT;                                                 // And exit.
+            //lfm_fsm.state = EXIT;                                                 // And exit.
+            lfm_fsm.state = DECODE_COMMAND;                                                 // And exit.
 
+            break;
+
+//------------------------------------------------------------------------------
+        case DECODE_COMMAND:
+            switch(lfm_data.buffer_1.command) {
+                case LF_CMD_NOP:
+                case LF_CMD_MT:
+                case LF_CMD_MT_BATT_LOW:
+                    //lfm_clear_status_flag(LFM_WTA_DELAYED_CMD_EXEC_FLAG);
+                    //lfm_data.wta_cmd = 0;
+                    //lfm_data.wta_cmd_counter = 0;
+                    lfm_set_status_flag(LFM_WTA_DELAYED_CMD_EXEC_FLAG);
+                    lfm_decode_command(LF_CMD_NOP);
+                    break;
+
+                case LF_WAKEUP_FROM_DEEP_SLEEP:
+                    lfm_set_status_flag(LFM_WTA_DELAYED_CMD_EXEC_FLAG);
+                    lfm_decode_command(LF_WAKEUP_FROM_DEEP_SLEEP);
+                    break;
+
+                default:
+                    break;
+            }
+
+            lfm_fsm.state = EXIT;                                                 // And exit.
             break;
 
 //------------------------------------------------------------------------------
