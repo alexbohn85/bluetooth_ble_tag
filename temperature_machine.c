@@ -22,21 +22,31 @@
 // Defines
 //******************************************************************************
 #define TEMP_SENSOR_PRECISION        (100)
+#define TEMP_MAX_DELTA_T             (5)   /* If temperature varies 'x', it will send a temperature message immediately */
 
 //******************************************************************************
 // Data types
 //******************************************************************************
 
-
 //******************************************************************************
 // Globals
 //******************************************************************************
 static volatile int8_t ttm_tag_current_temperature;
+static volatile int8_t ttm_tag_current_temp_thold;
 static tag_sw_timer_t ttm_report_timer;
+static tag_sw_timer_t ttm_read_timer;
+
 
 //******************************************************************************
 // Static Functions
 //******************************************************************************
+static void ttm_tick(void)
+{
+    // Tick Temperature Report Timer
+    tag_sw_timer_tick(&ttm_report_timer);
+    tag_sw_timer_tick(&ttm_read_timer);
+}
+
 static void ttm_read_temperature(void)
 {
     volatile float temp_celsius = EMU_TemperatureGet();
@@ -77,14 +87,40 @@ int8_t ttm_get_current_temperature(void)
  */
 void temperature_run(void)
 {
-    // Tick Temperature Report Timer
-    tag_sw_timer_tick(&ttm_report_timer);
+    // Update TTM machine timers
+    ttm_tick();
 
-    // Measure SoC temperature and send Tag Temperature Beacon event to Tag Beacon Machine.
-    if (tag_sw_timer_is_expired(&ttm_report_timer)) {
+    // Tag Temperature Reading (timer)
+    if (tag_sw_timer_is_expired(&ttm_read_timer)) {
+
+        int8_t delta_t;
 
         // Read current temperature.
         ttm_read_temperature();
+
+        // Get temperature delta based on current threshold
+        delta_t = (ttm_tag_current_temperature - ttm_tag_current_temp_thold);
+        if (delta_t < 0) {
+            delta_t = (~delta_t + 1);
+        }
+
+        if (delta_t >= TEMP_MAX_DELTA_T) {
+            // Update threshold
+            ttm_tag_current_temp_thold = ttm_tag_current_temperature;
+
+            // Send an Async Temperature Beacon event to Tag Beacon Machine (this message will be sent immediately)
+            tbm_set_event(TBM_TEMPERATURE_EVT, true);
+
+            // Reload TTM report timer (since we are anticipating the message here)
+            tag_sw_timer_reload(&ttm_report_timer, TTM_REPORT_TIMER_RELOAD);
+        }
+
+        // Reload TTM sensor read timer
+        tag_sw_timer_reload(&ttm_read_timer, TTM_READ_TIMER_RELOAD);
+    }
+
+    // Tag Temperature Message reporting (timer)
+    if (tag_sw_timer_is_expired(&ttm_report_timer)) {
 
         // Send an Async Temperature Beacon event to Tag Beacon Machine (this message will be sent immediately)
         //tbm_set_event(TBM_TEMPERATURE_EVT, true);
@@ -93,15 +129,20 @@ void temperature_run(void)
         tbm_set_event(TBM_TEMPERATURE_EVT, false);
 
         // Reload TTM Report Timer
-        tag_sw_timer_reload(&ttm_report_timer, TTM_TIMER_PERIOD_SEC_RELOAD);
-
+        tag_sw_timer_reload(&ttm_report_timer, TTM_REPORT_TIMER_RELOAD);
     }
 }
 
 uint32_t ttm_init(void)
 {
-    // Load internal timer for temperature sampling and temperature report interval
-    tag_sw_timer_reload(&ttm_report_timer, TTM_TIMER_PERIOD_SEC_RELOAD);
+    // Init TTM Report Timer period
+    tag_sw_timer_reload(&ttm_report_timer, TTM_REPORT_TIMER_RELOAD);
+
+    // Init TTM Read Timer period
+    tag_sw_timer_reload(&ttm_read_timer, TTM_READ_TIMER_RELOAD);
+
+    // Read current temperature
     ttm_read_temperature();
+
     return 0;
 }
