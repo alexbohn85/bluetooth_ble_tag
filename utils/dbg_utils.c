@@ -94,7 +94,7 @@ void dbg_print_banner(void)
     printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d msec\n", "TTM Slow Tasks Tick", TMM_SLOW_TASK_TIMER_PERIOD_MS);
     printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d sec\n", "Beacon Rate (Fast)", TBM_FAST_BEACON_RATE_SEC);
     printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d sec\n", "Beacon Rate (Slow)", TBM_SLOW_BEACON_RATE_SEC);
-    printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d sec\n", "Temperature Report Rate", (int)(TTM_TIMER_PERIOD_SEC_RELOAD));
+    printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d sec\n", "Temperature Report Rate", (int)(TTM_REPORT_TIMER_RELOAD));
     printf(COLOR_B_WHITE "%35s |"COLOR_CYAN" %4d sec\n", "Uptime Beacon Rate", (int)(TUM_TIMER_PERIOD_SEC));
     printf(COLOR_B_WHITE "%35s |"COLOR_CYAN"    %s\n", "Current Uptime", uptime);
 

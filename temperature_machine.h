@@ -12,10 +12,12 @@
 #define TEMPERATURE_MACHINE_H_
 
 #if defined(TAG_DEV_MODE_PRESENT)
-#define TTM_TIMER_PERIOD_SEC_RELOAD         (60)  //seconds
+#define TTM_REPORT_TIMER_RELOAD             (600)   /* Tag Temperature Message is (triggered) every 10 minute */
 #else
-#define TTM_TIMER_PERIOD_SEC_RELOAD         (600)  //seconds
+#define TTM_REPORT_TIMER_RELOAD             (1800)  /* Tag Temperature Message is (triggered) every 30 minutes */
 #endif
+
+#define TTM_READ_TIMER_RELOAD               (600)   /* Read Temperature Sensor every 10 minutes */
 
 //******************************************************************************
 // Interface
