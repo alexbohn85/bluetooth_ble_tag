@@ -9,6 +9,7 @@
 #include "stdbool.h"
 #include "sl_power_manager.h"
 #include "sl_sleeptimer.h"
+#include "rail.h"
 
 #include "dbg_utils.h"
 #include "lf_decoder.h"
@@ -20,6 +21,7 @@
 //******************************************************************************
 // Defines
 //******************************************************************************
+#define TAG_LOWEST_POWER_MODE    (SL_POWER_MANAGER_EM2)
 
 //******************************************************************************
 // Data types
@@ -28,6 +30,7 @@
 //******************************************************************************
 // Global variables
 //******************************************************************************
+RAIL_Handle_t railHandle;
 static sl_sleeptimer_timer_handle_t tpm_sleeptimer;
 volatile bool sleep_on_isr_exit;
 
@@ -45,6 +48,24 @@ static void tpm_delay_system_reset(sl_sleeptimer_timer_handle_t *handle, void *d
 //******************************************************************************
 // Non Static functions
 //******************************************************************************
+void tag_check_deep_sleep(void)
+{
+    if(RAIL_IsRfSensed(&railHandle)) {
+        printf("\nWaking up from EM4 by RFSENSE...");
+    }
+}
+
+void tag_enter_deep_sleep(void)
+{
+    RAIL_StartRfSense(&railHandle, RAIL_RFSENSE_ANY, 2, (void*)NULL);
+    sl_power_manager_remove_em_requirement(SL_POWER_MANAGER_EM2);
+    sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM4);
+    cli_stop();
+    while(1) {
+        EMU_EnterEM4();
+    }
+}
+
 /**
  * @brief Called right before sleep
  */
@@ -134,4 +155,16 @@ sl_power_manager_on_isr_exit_t app_sleep_on_isr_exit(void)
     } else {
         return SL_POWER_MANAGER_WAKEUP;
     }
+}
+
+void tag_power_settings(void)
+{
+    // Set what is the lowest power mode for the Power Manager Service can enter.
+    // For instance: LF Decoder requires EM2 to run with 32KHz LFXO crystal and it needs to run all the time.
+    sl_power_manager_add_em_requirement(TAG_LOWEST_POWER_MODE);
+
+    DEBUG_LOG(DBG_CAT_SYSTEM, "Power Manager lowest power mode enabled is EM%d", TAG_LOWEST_POWER_MODE);
+
+    // Tell Power Manager if we want to stay awake in main context or go to sleep immediately after an ISR.
+    tag_sleep_on_isr_exit(true);
 }

@@ -28,5 +28,6 @@ extern volatile bool sleep_on_isr_exit;
 void tag_sleep_on_isr_exit(bool enable);
 void tpm_schedule_system_reset(uint32_t timeout_ms);
 void tpm_enter_current_draw_mode(uint32_t reset_delay_ms);
+void tag_power_settings(void);
 
 #endif /* TAG_POWER_MANAGER_H_ */
