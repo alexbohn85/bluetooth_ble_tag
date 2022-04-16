@@ -27,7 +27,6 @@
  * If 'git_log.h' file is not present in the root folder, add pre build step
  * command '../pre_build.bat' into project C/C++ Build > Settings > Build Steps
  */
-//TODO Bugfix - if commit message has "" it crashes the build, just avoid it or handle this in the pre_build script.
 #include "git_log.h"
 
 /** Keep tag specific headers here **/
@@ -46,19 +45,6 @@
 #include "iadc.h"
 #include "lf_decoder.h"
 
-#define TAG_LOWEST_POWER_MODE    (SL_POWER_MANAGER_EM2)
-
-void tag_power_settings(void)
-{
-    // Set what is the lowest power mode for the Power Manager Service can enter.
-    // For instance: LF Decoder requires EM2 to run with 32KHz LFXO crystal and it needs to run all the time.
-    sl_power_manager_add_em_requirement(TAG_LOWEST_POWER_MODE);
-
-    DEBUG_LOG(DBG_CAT_SYSTEM, "Power Manager lowest power mode enabled is EM%d", TAG_LOWEST_POWER_MODE);
-
-    // Tell Power Manager if we want to stay awake in main context or go to sleep immediately after an ISR.
-    tag_sleep_on_isr_exit(true);
-}
 
 //------------------------------------------------------------------------------
 // Tag Main Initialization
