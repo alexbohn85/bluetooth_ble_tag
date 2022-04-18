@@ -158,7 +158,7 @@ void tag_firmware_rev_run(void)
         //tbm_set_event(TBM_FIRMWARE_REV_EVT, true);
 
         // Send Synchronous Tag Firmware Revision Beacon Event to Tag Beacon Machine (this message will synchronize with the slow or fast beacon rate)
-        tbm_set_event(TBM_FIRMWARE_REV_EVT, true);
+        tbm_set_event(TBM_FIRMWARE_REV_EVT, false);
 
         // Reload Firmware Rev report timer
         tag_sw_timer_reload(&fw_revision_timer, TMM_TAG_FW_REV_PERIOD_SEC);
