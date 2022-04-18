@@ -32,7 +32,7 @@
 #define LF_CMD_NOP                             (0x00)
 #define LF_CMD_MT_BATT_LOW                     (0x1E)
 #define LF_CMD_MT                              (0x1F)
-#define LF_WAKEUP_FROM_DEEP_SLEEP              (0xFF)  //placeholder value here
+#define LF_CMD_WAKEUP_FROM_DEEP_SLEEP          (0xFF)  //placeholder value here
 
 // LF Exit timer
 #define LFM_TIMER_A_PERIOD_MS                  3000
@@ -279,9 +279,9 @@ static void lfm_process_step(void)
                     lfm_decode_command(LF_CMD_NOP);
                     break;
 
-                case LF_WAKEUP_FROM_DEEP_SLEEP:
+                case LF_CMD_WAKEUP_FROM_DEEP_SLEEP:
                     lfm_set_status_flag(LFM_WTA_DELAYED_CMD_EXEC_FLAG);
-                    lfm_decode_command(LF_WAKEUP_FROM_DEEP_SLEEP);
+                    lfm_decode_command(LF_CMD_WAKEUP_FROM_DEEP_SLEEP);
                     break;
 
                 default:
