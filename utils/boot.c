@@ -117,6 +117,11 @@ void boot_print_reset_cause(void)
     if (reset_cause & EMU_RSTCAUSE_DVDDBOD) {
         _boot_print_reset_cause("[Last Reset Cause] Brown Out Reset EMU_RSTCAUSE_DVDDBOD");
     }
+
+    // Wake-up from Deep Sleep (EM4) (see tag_enter_deep_sleep())
+    if (reset_cause & EMU_RSTCAUSE_EM4) {
+        _boot_print_reset_cause("[Last Reset Cause] Wake Up from Deep Sleep EMU_RSTCAUSE_EM4");
+    }
 }
 
 uint8_t boot_get_mode(void)
