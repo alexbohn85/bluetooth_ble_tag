@@ -15,6 +15,7 @@
 #include "lf_decoder.h"
 #include "em_rtcc.h"
 #include "cli.h"
+#include "tag_power_manager.h"
 #include "tag_gpio_mapping.h"
 
 
@@ -22,6 +23,10 @@
 // Defines
 //******************************************************************************
 #define TAG_LOWEST_POWER_MODE    (SL_POWER_MANAGER_EM2)
+// RFSENSE Sync Word Length in bytes, 1-4 bytes.
+#define SYNC_WORD_SIZE    (2U)
+// RFSENSE Sync Word Value.
+#define SYNC_WORD         (0xB16FU)
 
 //******************************************************************************
 // Data types
@@ -33,6 +38,14 @@
 RAIL_Handle_t railHandle;
 static sl_sleeptimer_timer_handle_t tpm_sleeptimer;
 volatile bool sleep_on_isr_exit;
+
+// Configure the receiving node (EFR32XG22) for RF Sense.
+RAIL_RfSenseSelectiveOokConfig_t config = {
+  .band = RAIL_RFSENSE_2_4GHZ,
+  .syncWordNumBytes = SYNC_WORD_SIZE,
+  .syncWord = SYNC_WORD,
+  .cb = (void*)NULL
+};
 
 //******************************************************************************
 // Static functions
@@ -48,16 +61,19 @@ static void tpm_delay_system_reset(sl_sleeptimer_timer_handle_t *handle, void *d
 //******************************************************************************
 // Non Static functions
 //******************************************************************************
-void tag_check_deep_sleep(void)
+void tag_check_wakeup_from_deep_sleep(void)
 {
     if(RAIL_IsRfSensed(&railHandle)) {
-        printf("\nWaking up from EM4 by RFSENSE...");
+        DEBUG_LOG(DBG_CAT_SYSTEM, "Waking up from Deep Sleep (EM4) by RFSENSE...");
     }
+
+    // Here we can add some timeout to receive some additional command to confirm this
+    // or not..
 }
 
 void tag_enter_deep_sleep(void)
 {
-    RAIL_StartRfSense(&railHandle, RAIL_RFSENSE_ANY, 2, (void*)NULL);
+    RAIL_StartSelectiveOokRfSense(railHandle, &config);
     sl_power_manager_remove_em_requirement(SL_POWER_MANAGER_EM2);
     sl_power_manager_add_em_requirement(SL_POWER_MANAGER_EM4);
     cli_stop();

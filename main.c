@@ -62,6 +62,9 @@ void tag_init(void)
     // Print last reset cause
     boot_print_reset_cause();
 
+    // Check if tag is waking up from deep sleep (EM4)
+    tag_check_wakeup_from_deep_sleep();
+
     // Setup Power Manager settings
     tag_power_settings();
 
