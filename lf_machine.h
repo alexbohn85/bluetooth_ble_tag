@@ -19,6 +19,7 @@
 #define LFM_WTA_DELAYED_CMD_EXEC_FLAG          (0x01)                           // This flag indicate we received a WTA command and we are confirming it.
 #define LFM_WTA_BACKOFF_FLAG                   (0x02)                           // After receiving and confirming WTA command we want to avoid receiving another command right away.
 #define LFM_STAYING_IN_FIELD_FLAG              (0x04)
+#define LFM_ENTERING_FIELD_FLAG                (0x08)
 
 //******************************************************************************
 // Extern global variables
