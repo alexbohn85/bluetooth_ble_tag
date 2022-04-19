@@ -396,11 +396,11 @@ void tag_beacon_run(void)
 
             // Reload Synchronous Beacon timer
             // Check for feature states and decide if next beacon is "slow" or "fast" interval.
-            if ((lfm_get_lf_status() & LFM_STAYING_IN_FIELD_FLAG)) {
+            if ((lfm_get_lf_status() & (LFM_STAYING_IN_FIELD_FLAG | LFM_ENTERING_FIELD_FLAG))) {
                 tag_sw_timer_reload(&tbm_beacon_timer, TBM_FAST_BEACON_RATE_RELOAD);
             } else {
-                tag_sw_timer_reload(&tbm_beacon_timer, TBM_FAST_BEACON_RATE_RELOAD);
-                //tag_sw_timer_reload(&tbm_beacon_timer, TBM_SLOW_BEACON_RATE_RELOAD);
+                //tag_sw_timer_reload(&tbm_beacon_timer, TBM_FAST_BEACON_RATE_RELOAD);
+                tag_sw_timer_reload(&tbm_beacon_timer, TBM_SLOW_BEACON_RATE_RELOAD);
             }
         }
     }
