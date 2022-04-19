@@ -105,7 +105,7 @@ static void ble_api_start_adv(uint8_t retransmissions, uint32_t min_interval, ui
     *     - <b>6:</b> Advertise on CH38 and CH39
     *     - <b>7:</b> Advertise on all channels
     */
-    sl_bt_advertiser_set_channel_map(advertising_set_handle, 1);
+    sl_bt_advertiser_set_channel_map(advertising_set_handle, 7);
 
 #if 1
     // Start BLE advertising (advertiser_non_connectable)
@@ -137,7 +137,6 @@ static void bmm_ble_api_start_adv_callback(sl_sleeptimer_timer_handle_t *handle,
 
     // Start a BLE Advertiser
     ble_api_start_adv(ADV_RETRANSMISSIONS, ADV_MIN_INTERVAL, ADV_MAX_INTERVAL);
-    //ble_api_start_adv(10, 20, 30);
 
     // While BLE is being used we change the global setting to avoid going to sleep after an ISR.
     // This means, after the ISR we go to main context to let call ble_api_fsm_run() until adv is over.
@@ -320,7 +319,7 @@ static void bmm_append_tag_data(uint8_t *pdu_len, bmm_ble_adv_types_t ad_type)
 
     // Fill in all Manufacturer Specific Data fields
     adv_payload.data[(*pdu_len)++] = 0;                                         // placeholder for the length once we finish packet assembly.
-    adv_payload.data[(*pdu_len)++] = ad_type;                                   // ADV type id
+    adv_payload.data[(*pdu_len)++] = ad_type;                                   // set ADV_TYPE id
     man_spec_data_len++;
     if (ad_type == ADV_MANU_SPEC_DATA) {
         adv_payload.data[(*pdu_len)++] = UUID_MSD_GUARD_L;                      // GuardRFID 16-bits UUID for MSD (little-endian)
@@ -372,10 +371,10 @@ static uint32_t bmm_process_msg_events(void)
         bmm_append_adv_complete_local_name(&pdu_len);
 
         // Append Manufacturer Specific Data (MSD)
-        bmm_append_tag_data(&pdu_len, ADV_MANU_SPEC_DATA);
+        //bmm_append_tag_data(&pdu_len, ADV_MANU_SPEC_DATA);
 
         // Append Service Data (SD)
-        //bmm_append_tag_data(&pdu_len, ADV_SERVICE_DATA);
+        bmm_append_tag_data(&pdu_len, ADV_SERVICE_DATA);
 
         status = 0;
 
