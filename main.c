@@ -57,7 +57,6 @@ void tag_init(void)
     // Initialize UART (used by dbg_utils and cli)
     dbg_log_init();
     dbg_log_enable(true);
-    dbg_print_banner();
 
     // Print last reset cause
     boot_print_reset_cause();
@@ -111,6 +110,8 @@ void tag_init(void)
             tmm_start(TMM_RUNNING);
             break;
     }
+
+    dbg_print_banner();
 
     while (1)
     {

@@ -326,14 +326,31 @@ static void tbm_decode_event(tbm_beacon_events_t event)
     }
 }
 
-
 //******************************************************************************
 // Non Static functions
 //******************************************************************************
+void tbm_apply_new_settings(tbm_nvm_data_t *b)
+{
+    if ((b->fast_rate > 0) && (b->slow_rate > 0)) {
+
+        // Update reload values
+        tbm_fast_rate_reload = b->fast_rate;
+        tbm_slow_rate_reload = (b->slow_rate * 4);
+
+        // Update timers
+        tag_sw_timer_reload(&tbm_beacon_timer, tbm_fast_rate_reload);
+        tag_sw_timer_reload(&tbm_beacon_timer, tbm_slow_rate_reload);
+
+    } else {
+        DEBUG_LOG(DBG_CAT_WARNING, "Beacon Rate cannot be zero...");
+    }
+}
+
 uint16_t tbm_get_fast_beacon_rate(void)
 {
     return (uint16_t)tbm_fast_rate_reload;
 }
+
 uint16_t tbm_get_slow_beacon_rate(void)
 {
     return (uint16_t)(tbm_slow_rate_reload / 4);
@@ -409,11 +426,9 @@ void tag_beacon_run(void)
             // Reload Synchronous Beacon timer
             // Check for feature states and decide if next beacon is "slow" or "fast" interval.
             if ((lfm_get_lf_status() & (LFM_STAYING_IN_FIELD_FLAG | LFM_ENTERING_FIELD_FLAG))) {
-                //tag_sw_timer_reload(&tbm_beacon_timer, TBM_FAST_BEACON_RATE_RELOAD);
                 tag_sw_timer_reload(&tbm_beacon_timer, tbm_fast_rate_reload);
             } else {
                 tag_sw_timer_reload(&tbm_beacon_timer, tbm_slow_rate_reload);
-                //tag_sw_timer_reload(&tbm_beacon_timer, TBM_SLOW_BEACON_RATE_RELOAD);
             }
         }
     }
@@ -436,8 +451,7 @@ uint32_t tbm_init(void)
 
     // If NVM values exist then load them instead
     if ((status == 0) && (b.is_erased == false)) {
-        tbm_fast_rate_reload = b.fast_rate;
-        tbm_slow_rate_reload = (b.slow_rate * 4);
+        tbm_apply_new_settings(&b);
     }
 
     return 0;
