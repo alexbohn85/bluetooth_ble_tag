@@ -450,7 +450,7 @@ const char* as39_get_device_name(void)
     return _as39_dev_handle->device_name;
 }
 
-uint8_t as39_get_attenuation_set(void)
+uint8_t as39_get_gain_setting(void)
 {
     return (_as39_dev_handle->registers.reg_4.GR & 0x0E) >> 1;
 }

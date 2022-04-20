@@ -465,7 +465,7 @@ const char* as39_get_device_name(void);
  *
  * @return uint8_t
  */
-uint8_t as39_get_attenuation_set(void);
+uint8_t as39_get_gain_setting(void);
 
 #endif /* AS393X_H_ */
 

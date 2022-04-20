@@ -11,6 +11,7 @@
 #include "stdio.h"
 
 #include "tag_defines.h"
+#include "nvm.h"
 #include "dbg_utils.h"
 #include "tag_sw_timer.h"
 #include "lf_machine.h"
@@ -40,6 +41,8 @@ typedef struct tbm_status_t {
 //******************************************************************************
 static tag_sw_timer_t tbm_beacon_timer;
 static volatile tbm_status_t tbm_status;
+static uint32_t tbm_fast_rate_reload;
+static uint32_t tbm_slow_rate_reload;
 
 //******************************************************************************
 // Static functions
@@ -327,6 +330,15 @@ static void tbm_decode_event(tbm_beacon_events_t event)
 //******************************************************************************
 // Non Static functions
 //******************************************************************************
+uint16_t tbm_get_fast_beacon_rate(void)
+{
+    return (uint16_t)tbm_fast_rate_reload;
+}
+uint16_t tbm_get_slow_beacon_rate(void)
+{
+    return (uint16_t)(tbm_slow_rate_reload / 4);
+}
+
 /**
  * @brief Sets a msg event flag for Tag Beacon Machine
  * @param tbm_beacon_events_t
@@ -397,10 +409,11 @@ void tag_beacon_run(void)
             // Reload Synchronous Beacon timer
             // Check for feature states and decide if next beacon is "slow" or "fast" interval.
             if ((lfm_get_lf_status() & (LFM_STAYING_IN_FIELD_FLAG | LFM_ENTERING_FIELD_FLAG))) {
-                tag_sw_timer_reload(&tbm_beacon_timer, TBM_FAST_BEACON_RATE_RELOAD);
-            } else {
                 //tag_sw_timer_reload(&tbm_beacon_timer, TBM_FAST_BEACON_RATE_RELOAD);
-                tag_sw_timer_reload(&tbm_beacon_timer, TBM_SLOW_BEACON_RATE_RELOAD);
+                tag_sw_timer_reload(&tbm_beacon_timer, tbm_fast_rate_reload);
+            } else {
+                tag_sw_timer_reload(&tbm_beacon_timer, tbm_slow_rate_reload);
+                //tag_sw_timer_reload(&tbm_beacon_timer, TBM_SLOW_BEACON_RATE_RELOAD);
             }
         }
     }
@@ -408,6 +421,24 @@ void tag_beacon_run(void)
 
 uint32_t tbm_init(void)
 {
+    tbm_nvm_data_t b;
+    uint32_t status;
+
+    // Init timer with shorter timeout so a message goes right away in a reset or power up.
     tag_sw_timer_reload(&tbm_beacon_timer, TBM_INIT_BEACON_RATE_SEC);
+
+    // Use factory default values (consider we are going to use this)
+    tbm_fast_rate_reload = TBM_FAST_BEACON_RATE_RELOAD;
+    tbm_slow_rate_reload = TBM_SLOW_BEACON_RATE_RELOAD;
+
+    // Read Beacon Rate configuration from NVM
+    status = nvm_read_tbm_settings(&b);
+
+    // If NVM values exist then load them instead
+    if ((status == 0) && (b.is_erased == false)) {
+        tbm_fast_rate_reload = b.fast_rate;
+        tbm_slow_rate_reload = (b.slow_rate * 4);
+    }
+
     return 0;
 }

@@ -63,12 +63,13 @@ typedef struct tsm_tag_status_t {
 typedef struct tsm_tag_ext_status_t {
     uint8_t length;
     union {
-        /* Byte 0 */
-        uint8_t slow_beacon_rate: 3;    /* Current setting for Slow Beacon Rate */
-        uint8_t fast_beacon_rate: 3;    /* Current setting for Fast Beacon Rate */
-        uint8_t lf_sensitivity : 2;     /* Current setting for LF Gain */
-
-        uint8_t bytes[6];
+        struct {
+            uint16_t slow_beacon_rate;      /* Current setting for Slow Beacon Rate */
+            uint16_t fast_beacon_rate;      /* Current setting for Fast Beacon Rate */
+            uint8_t lf_gain : 3;            /* LF Gain Reduction setting */
+            uint8_t : 5;                    /* reserved */
+        };
+        uint8_t bytes[10];
     };
 } tsm_tag_ext_status_t;
 
