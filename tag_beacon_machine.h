@@ -50,6 +50,7 @@ typedef struct tbm_nvm_data_t {
 // Interface
 //******************************************************************************
 void tbm_set_event(tbm_beacon_events_t event, bool is_async);
+void tbm_apply_new_settings(tbm_nvm_data_t *b);
 uint16_t tbm_get_fast_beacon_rate(void);
 uint16_t tbm_get_slow_beacon_rate(void);
 void tag_beacon_run(void);

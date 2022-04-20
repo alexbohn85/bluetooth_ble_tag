@@ -15,6 +15,7 @@
 #include "dbg_utils.h"
 #include "lf_decoder.h"
 #include "tag_main_machine.h"
+#include "tag_beacon_machine.h"
 #include "tag_power_manager.h"
 #include "nvm.h"
 #include "boot.h"
@@ -129,10 +130,10 @@ static void cli_process_manufacturing_command(void)
         if (ret == 1) {
             tpm_enter_current_draw_mode(reset_delay_timeout);
             SEND_RSP(DATA_ACK);
-            DEBUG_LOG(DBG_CAT_CLI, "Entering current draw mode, argument = %lu ms", reset_delay_timeout);
+            DEBUG_LOG(DBG_CAT_CLI, "Entering current draw mode, argument = %lu msec", reset_delay_timeout);
         } else {
             SEND_RSP(DATA_NAK);
-            DEBUG_LOG(DBG_CAT_CLI, "Syntax error...");
+            DEBUG_LOG(DBG_CAT_WARNING, "Syntax error...");
         }
 
     // write/read custom mac address to NVM ------------------------------------
@@ -144,7 +145,7 @@ static void cli_process_manufacturing_command(void)
             tpm_schedule_system_reset(1000);
         } else {
             SEND_RSP(DATA_NAK);
-            DEBUG_LOG(DBG_CAT_CLI, "Syntax error... expected MAC address format -> XX:XX:XX:XX:XX:XX");
+            DEBUG_LOG(DBG_CAT_WARNING, "Syntax error... expected MAC address format -> XX:XX:XX:XX:XX:XX");
         }
 
     } else if (strstr(cmd.data, "read mac") != NULL) {
@@ -279,19 +280,53 @@ static void cli_process_command(void)
                                 "   DBG_CAT_TEMP\n"
                                 "   DBG_CAT_TAG_LF\n");
 
-    // write/read custom MAC address to NVM ------------------------------------
+    // write/read custom MAC address to NVM and reset to apply -----------------
     } else if (strstr(cmd.data, "write mac") != NULL) {
         if(cli_decode_mac_addr() == 0) {
             DEBUG_LOG(DBG_CAT_CLI, "New MAC was saved into NVM... rebooting to apply new settings");
             tpm_schedule_system_reset(1000);
         } else {
-            DEBUG_LOG(DBG_CAT_CLI, "Syntax error... expected MAC address format -> XX:XX:XX:XX:XX:XX");
+            DEBUG_LOG(DBG_CAT_WARNING, "Syntax error... expected MAC address format -> XX:XX:XX:XX:XX:XX");
         }
 
     } else if (strstr(cmd.data, "read mac") != NULL) {
         uint8_t mac[6];
         nvm_read_mac_address(mac);
         cli_print_mac(mac);
+
+    // write beacon rate settings to NVM and apply -----------------------------
+    } else if (strstr(cmd.data, "write beacon rate") != NULL) {
+
+        int ret;
+        uint32_t slow_rate;
+        uint32_t fast_rate;
+
+        ret = sscanf(cmd.data, "%*s %*s %*s %lu %lu", &slow_rate, &fast_rate);
+
+        if (ret == 2) {
+            if ( (slow_rate > 0) &&
+                 (fast_rate > 0) &&
+                 (slow_rate < 0xFFFF) &&
+                 (fast_rate < 0xFFFF) ) {
+
+                tbm_nvm_data_t b;
+
+                b.is_erased = false;
+                b.slow_rate = (uint16_t)slow_rate;
+                b.fast_rate = (uint16_t)fast_rate;
+
+                DEBUG_LOG(DBG_CAT_CLI, "Writing to NVM...");
+                nvm_write_tbm_settings(&b);
+
+                DEBUG_LOG(DBG_CAT_CLI, "Applying new settings to Tag Beacon Machine...");
+                tbm_apply_new_settings(&b);
+
+            } else {
+                DEBUG_LOG(DBG_CAT_WARNING, "Error, value range must be 1 to 65353");
+            }
+        } else {
+            DEBUG_LOG(DBG_CAT_WARNING, "Syntax error... unexpected command");
+        }
 
     // stop cli ----------------------------------------------------------------
     } else if (strcmp(cmd.data, "cli stop") == 0) {
@@ -324,6 +359,10 @@ static void cli_process_command(void)
                "   write mac <address>                              -> Write MAC address into NVM.\n"                    \
                "                                                             <address> format -> XX:XX:XX:XX:XX:XX\n"    \
                "   read mac                                         -> Read MAC address\n"                               \
+               "   -----------------------------------------------------------------------------------------\n"          \
+               "   write beacon rate <slow> <fast>                  -> Write beacon rate into NVM and apply.\n"          \
+               "                                                             <slow> - 1 to 65353 (x1 sec)\n"             \
+               "                                                             <fast> - 1 to 65353 (x250 mS)\n"            \
                "   -----------------------------------------------------------------------------------------\n"          \
                "   cli stop                                         -> Stop cli process\n"                               \
                "   git info                                         -> Show git info\n"                                  \
