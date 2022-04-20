@@ -12,4 +12,4 @@
  *     For Dev/Internal/QA Releases increments "d"
  *     For Production Releases increments the other bytes and leave "d" equals 0.
  */
-const uint8_t firmware_revision[4] = { 0, 0, 0, 3 };
+const uint8_t firmware_revision[4] = { 0, 0, 0, 4 };
