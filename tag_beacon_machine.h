@@ -11,6 +11,7 @@
 #ifndef TAG_BEACON_MACHINE_H_
 #define TAG_BEACON_MACHINE_H_
 
+#include "stdbool.h"
 
 //******************************************************************************
 // Defines
@@ -39,11 +40,18 @@ typedef enum tbm_beacon_events_t {
     TBM_UPTIME_EVT         = (1 << 10)
 } tbm_beacon_events_t;
 
+typedef struct tbm_nvm_data_t {
+    bool is_erased;           /* if is_erased = "true" factory defined values will be loaded instead during machine init */
+    uint16_t fast_rate;
+    uint16_t slow_rate;
+} tbm_nvm_data_t;
+
 //******************************************************************************
 // Interface
 //******************************************************************************
 void tbm_set_event(tbm_beacon_events_t event, bool is_async);
-void tbm_set_fast_beacon_rate(bool enable);
+uint16_t tbm_get_fast_beacon_rate(void);
+uint16_t tbm_get_slow_beacon_rate(void);
 void tag_beacon_run(void);
 uint32_t tbm_init(void);
 

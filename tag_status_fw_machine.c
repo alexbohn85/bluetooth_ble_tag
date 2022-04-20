@@ -47,16 +47,16 @@ static void tsm_update_tag_extended_status(void)
     //TODO All hard coded values now for later implementation of configurable fast_beacon_rate, slow_beacon_rate, etc..
 
     // Get Fast Beacon Rate configuration
-    tsm_tag_ext_status.fast_beacon_rate = 0x04;
+    tsm_tag_ext_status.fast_beacon_rate = __REV16(tbm_get_fast_beacon_rate());
 
     // Get Slow Beacon Rate configuration
-    tsm_tag_ext_status.slow_beacon_rate = 0x04;
+    tsm_tag_ext_status.slow_beacon_rate = __REV16(tbm_get_slow_beacon_rate());
 
     // Get LF Gain Reduction Setting
-    tsm_tag_ext_status.lf_sensitivity = 0; // values (0, 0dBm), (1, -4dBm), (2, -16dBm), (3, -24dBm)
+    tsm_tag_ext_status.lf_gain = as39_get_gain_setting(); // values (0, 0dBm), (1, -4dBm), (2, -16dBm), (3, -24dBm)
 
-    // For now we only have 1 byte so...
-    tsm_tag_ext_status.length = 1;
+    // For now we only have 5 bytes..
+    tsm_tag_ext_status.length = 5;
 
 }
 
