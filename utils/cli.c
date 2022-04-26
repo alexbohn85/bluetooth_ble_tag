@@ -64,7 +64,7 @@ static void cli_print_mac(uint8_t* mac)
     uint8_t i;
 
     printf("\n");
-    for (i = 0; i < 5; i++) {
+    for (i = 5; i > 0; --i) {
         printf("%.2X:", (uint8_t)mac[i]);
     }
     printf("%.2X", mac[i]);
