@@ -65,9 +65,9 @@ static void cli_print_mac(uint8_t* mac)
 
     printf("\n");
     for (i = 0; i < 5; i++) {
-        printf("%2X:", (uint8_t)mac[i]);
+        printf("%.2X:", (uint8_t)mac[i]);
     }
-    printf("%2X", mac[i]);
+    printf("%.2X", mac[i]);
 }
 
 static void cli_clear_input_buffer(void)
