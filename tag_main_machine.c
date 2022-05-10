@@ -189,7 +189,8 @@ void tag_main_machine_isr(void)
             tag_beacon_run();
             // Build packet and transmit BLE Advertising Beacons
             ble_manager_run();
-
+            //printf("\nHFXO %s", ((SystemSYSCLKGet() == 38400000UL) ? "True" : "False"));
+            //printf("\nbmm_adv_running = %s", (bmm_adv_running ? "True" : "False"));
             break;
 
         case TMM_PAUSED:

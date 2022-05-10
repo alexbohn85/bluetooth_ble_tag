@@ -493,7 +493,7 @@ void cli_start(void)
                                                     cli_run_fsm,
                                                     NULL,
                                                     5,
-                                                    SL_SLEEPTIMER_NO_HIGH_PRECISION_HF_CLOCKS_REQUIRED_FLAG);
+                                                    0);
     if (status == 0) {
         DEBUG_LOG(DBG_CAT_SYSTEM, "Starting CLI process...");
     }

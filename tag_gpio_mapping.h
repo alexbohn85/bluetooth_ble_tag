@@ -11,11 +11,17 @@
 #if TAG_ID == UT3_ID
 
 //TODO This pins will later be mapped to UART TX/RX
-#define BOOTSEL_B1_PORT                        (gpioPortB)
-#define BOOTSEL_B1_PIN                         (1)
+//#define BOOTSEL_B1_PORT                        (gpioPortB)
+//#define BOOTSEL_B1_PIN                         (1)
 
-#define BOOTSEL_B2_PORT                        (gpioPortB)
-#define BOOTSEL_B2_PIN                         (2)
+//#define BOOTSEL_B2_PORT                        (gpioPortB)
+//#define BOOTSEL_B2_PIN                         (2)
+
+#define BOOTSEL_B1_PORT                        TAG_GPIO_UART_TX_PORT
+#define BOOTSEL_B1_PIN                         TAG_GPIO_UART_TX_PIN
+
+#define BOOTSEL_B2_PORT                        TAG_GPIO_UART_RX_PORT
+#define BOOTSEL_B2_PIN                         TAG_GPIO_UART_RX_PIN
 
 /* AS393x */
 #define TAG_GPIO_AS39_LF_DATA_PORT             (gpioPortA)

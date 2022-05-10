@@ -63,7 +63,8 @@
 #endif
 
 #if defined(LF_TOL_RELAXED)
-#define LF_PREAMBLE_L                (49)           //!  ~1.500 mS
+//#define LF_PREAMBLE_L                (49)           //!  ~1.500 mS
+#define LF_PREAMBLE_L                (160)           //!  ~1.500 mS
 #define LF_PREAMBLE_H                (200)          //!  ~6.100 mS
 #define LF_START_BIT_GAP_MIN         (41)           //!  ~1.250 mS
 #define LF_START_BIT_GAP_MAX         (45)           //!  ~1.350 mS
@@ -154,7 +155,11 @@ static void lf_decoder_capture_start(void)
 
 static void lf_decoder_reset_and_backoff(uint32_t timeout)
 {
-    as39_antenna_enable(false, false, false);
+    uint8_t value;
+    do {
+        as39_antenna_enable(false, false, false);
+        as39_read_reg(REG_0, &value);
+    } while (value != 0);
     lf_decoder_compare_start(timeout);
 }
 
@@ -218,6 +223,11 @@ void lf_decoder_compare_isr(void)
     lf_decoder_capture_start();
 }
 
+void lf_abort(uint8_t value)
+{
+    lf_decoder_reset_and_backoff(LF_FALSE_WAKEUP_TIMEOUT * value);
+}
+
 void lf_decoder_capture_isr(void)
 {
     decoder.curr_edge = RTCC_ChannelCaptureValueGet(LF_RTCC_CC0);
@@ -231,9 +241,9 @@ void lf_decoder_capture_isr(void)
         pulse_width = (~pulse_width + 1);
     }
 
-    if (decoder.errors > 5 ) {
+    if (decoder.errors > 10 ) {
         decoder.errors = 0;
-        lf_decoder_reset_and_backoff(LF_CRC_OK_TIMEOUT * 1);
+        lf_abort(10);
         return;
     }
 
@@ -259,8 +269,27 @@ void lf_decoder_capture_isr(void)
                 decoder.bit_counter = LF_NUMBER_OF_BITS;
                 decoder.crc = 0;
             } else {
-                lf_decoder_reset_and_backoff((LF_FALSE_WAKEUP_TIMEOUT * 10));
                 decoder.errors++;
+                lf_abort(10);
+                // Gradual backoff based on current error counter.
+                // This allows some trade off between performance and power.
+                //lf_decoder_reset_and_backoff(LF_FALSE_WAKEUP_TIMEOUT * 1);
+                /*
+                if (decoder.errors < 5) {
+                    // Default backoff 15mS
+                } else if (decoder.errors < 10) {
+                    lf_decoder_reset_and_backoff((LF_FALSE_WAKEUP_TIMEOUT * 4));
+                } else if (decoder.errors < 15) {
+                    lf_decoder_reset_and_backoff((LF_FALSE_WAKEUP_TIMEOUT * 8));
+                } else if (decoder.errors < 20){
+                    lf_decoder_reset_and_backoff((LF_FALSE_WAKEUP_TIMEOUT * 12));
+                } else {
+                    // Tag is picking strong noise, backoff for longer period to keep current draw below 20uA.
+                    lf_decoder_reset_and_backoff((LF_FALSE_WAKEUP_TIMEOUT * 30));
+                    // And restart error counter.
+                    decoder.errors = 0;
+                }
+                */
             }
             break;
 
@@ -269,6 +298,7 @@ void lf_decoder_capture_isr(void)
                 decoder.state = START_BIT;
             } else {
                 decoder.errors++;
+                lf_abort(10);
             }
             break;
 
@@ -285,7 +315,7 @@ void lf_decoder_capture_isr(void)
             } else if ((pulse_width > LF_ME_BIT1_L) && (pulse_width < LF_ME_BIT1_H)) {
                 decoder.buffer  = ((decoder.buffer  << 1) | 1);
             } else {
-                decoder.errors++;
+                lf_abort(5);
                 break;
             }
 
@@ -302,18 +332,20 @@ void lf_decoder_capture_isr(void)
             if (decoder.bit_counter == 0) {
                 uint8_t rx_crc = (decoder.buffer & 0x7F);
                 if (((decoder.crc >> 1) ^ rx_crc) == 0) {
-                    //! CRC OK!
+                    // CRC OK!
                     lf_decoder_set_lf_data();
-                    lf_decoder_reset_and_backoff(LF_CRC_OK_TIMEOUT * 1.5);
+                    lf_decoder_reset_and_backoff(LF_CRC_OK_TIMEOUT * 1);
                     decoder.errors = 0;
                 } else {
-                    lf_decoder_reset_and_backoff(LF_FALSE_WAKEUP_TIMEOUT * 10);
+                    //lf_decoder_reset_and_backoff(LF_FALSE_WAKEUP_TIMEOUT * 1);
                 }
             }
+
             break;
 
         default:
-            lf_decoder_reset_and_backoff(LF_FALSE_WAKEUP_TIMEOUT * 10);
+            //lf_decoder_reset_and_backoff(LF_FALSE_WAKEUP_TIMEOUT * 1);
+            //lf_abort(5);
             break;
     }
 }

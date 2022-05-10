@@ -14,7 +14,7 @@ tag: ['hardware:rf:band:2400']
 include:
 - path: ''
   file_list:
-  - {path: app.h}
+  - {path:}
 sdk: {id: gecko_sdk, version: 4.0.1}
 toolchain_settings: []
 component:

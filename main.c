@@ -91,8 +91,8 @@ void tag_init(void)
             DEBUG_LOG(DBG_CAT_SYSTEM, "Boot Select (boot_mode = 0x%.2X) -> Default mode", boot_get_mode());
             tmm_start(TMM_RUNNING);
 #if defined(TAG_DEV_MODE_PRESENT)
-            dbg_log_enable(true);
-            cli_start();
+            dbg_log_enable(false);
+            //cli_start();
 #else
             dbg_log_enable(false);
 #endif
