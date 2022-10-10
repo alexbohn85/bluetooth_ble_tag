@@ -19,7 +19,7 @@
 //******************************************************************************
 // Global variables
 //******************************************************************************
-#if TAG_ID == UT3_ID
+#if TAG_ID == MODEL_A_ID
 const char tag_name[] = "UT3";
 #endif
 
@@ -30,10 +30,10 @@ const char tag_name[] = "UT3";
 //******************************************************************************
 // Non Static functions
 //******************************************************************************
-char* tag_tag_type_to_string(void)
+char* get_tag_name(void)
 {
     switch(TAG_ID) {
-        case UT3_ID:
+        case MODEL_A_ID:
             return "UT3";
             break;
         default:
@@ -42,7 +42,7 @@ char* tag_tag_type_to_string(void)
     }
 }
 
-uint8_t tag_get_tag_type_id(void)
+uint8_t get_tag_type_id(void)
 {
     return TAG_ID;
 }

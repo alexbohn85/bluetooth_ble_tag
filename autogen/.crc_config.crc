@@ -1,2 +1,3 @@
 #CRC Codes for initially generated config files -- do not modify!
-sl_iostream_usart_debug_uart_config.h=-1441996608
+btl_interface_cfg.h=-171342559
+btl_interface_cfg_s2c2.h=-1169190214

@@ -1,6 +1,6 @@
 #include "spidrv.h"
 #include "sl_spidrv_instances.h"
-#include "em_assert.h"
+#include "sl_assert.h"
 
 
 #include "sl_spidrv_as39_spi_config.h"

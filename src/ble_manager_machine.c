@@ -1,9 +1,9 @@
 /*
  * ble_manager_machine.c
  *
- *  This module is the only interface between Tag Application and BLE. Which
- *  means it should encapsulate BLE concerns. Tag Application should not make
- *  BLE API calls directly.
+ *  Abstraction layer between the Tag Beacon Machine and Bluetooth BLE Stack API
+ *  This layer handles message queue, packet format, aggregate and dispatch advertising events.
+ *
  */
 
 #include "em_common.h"
@@ -90,10 +90,18 @@ static void ble_api_start_adv(uint8_t retransmissions, uint32_t min_interval, ui
     //sc = sl_bt_advertiser_create_set(&advertising_set_handle);
 
     //app_assert_status(sc);
+
+    /* Deprecated function
     sl_bt_advertiser_set_data( advertising_set_handle,
                                sl_bt_advertiser_advertising_data_packet,
                                adv_payload.length,
                                adv_payload.data);
+                               */
+    sl_bt_legacy_advertiser_set_data( advertising_set_handle,
+                               sl_bt_advertiser_advertising_data_packet,
+                               adv_payload.length,
+                               adv_payload.data);
+
     //app_assert_status(sc);
 
     /* Set all adv channels
@@ -109,9 +117,15 @@ static void ble_api_start_adv(uint8_t retransmissions, uint32_t min_interval, ui
 
 #if 1
     // Start BLE advertising (advertiser_non_connectable)
+    /* Deprecated SDK < v4.1.2
     sc = sl_bt_advertiser_start( advertising_set_handle,
                                  advertiser_user_data,
                                  advertiser_non_connectable);
+                                 */
+
+    sc = sl_bt_legacy_advertiser_start( advertising_set_handle,
+                                        sl_bt_legacy_advertiser_non_connectable);
+
 
 #else
     //TODO to receive commands we need reader to connect.
@@ -153,7 +167,7 @@ void bmm_queue_init(void)
 {
     queue.front = -1;
     queue.rear = -1;
-    memset(queue.item, 0, (sizeof(queue.item) / sizeof(queue.item[0])));
+    memset(queue.item, 0, (sizeof(queue.item) / sizeof(queue.item[0])) * BLE_CIRCULAR_BUFFER_SIZE);
 }
 
 bool bmm_queue_is_empty(void)

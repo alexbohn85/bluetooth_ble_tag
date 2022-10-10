@@ -59,11 +59,11 @@ KEEP_SYMBOL const ApplicationProperties_t sl_app_properties = {
     /// Bitfield representing type of application, e.g. @ref APPLICATION_TYPE_BLUETOOTH_APP
     .type = APPLICATION_TYPE_BLUETOOTH_APP,
     /// Version number for this application
-    .version = FW_REV,
+    .version = 0,
     /// Capabilities of this application
     .capabilities = 0,
     /// Unique ID (e.g. UUID or GUID) for the product this application is built for
-    .productId = TAG_TYPE_ID,
+    .productId = 0,
   },
 };
 

@@ -47,7 +47,7 @@ void dbg_print_banner(void)
                                                                                                 firmware_revision[2],
                                                                                                 firmware_revision[3]);
     printf(COLOR_B_WHITE "%35s | " COLOR_CYAN "%s\n", "Build Date", COMPILATION_TIME);
-    printf(COLOR_B_WHITE "%35s | " COLOR_CYAN "%s (0x%.2X)\n", "Tag Type", tag_tag_type_to_string(), tag_get_tag_type_id());
+    printf(COLOR_B_WHITE "%35s | " COLOR_CYAN "%s (0x%.2X)\n", "Tag Type", get_tag_name(), get_tag_type_id());
 
     printf(COLOR_WHITE     "\n-------------------------- Compilation Switches -------------------------\n");
 
@@ -115,7 +115,7 @@ void dbg_log_init(void)
     sl_iostream_set_default(sl_iostream_uart_debug_handle);
     sl_iostream_stdlib_disable_buffering();
     sl_sleeptimer_set_time(0);
-    printf("\n%s Tag Booting...", tag_tag_type_to_string());
+    printf("\n%s Tag Booting...", get_tag_name());
 #endif
 }
 

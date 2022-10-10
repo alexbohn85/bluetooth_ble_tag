@@ -15,10 +15,12 @@
 #define COMPILATION_TIME             (__DATE__" ("__TIME__")")
 
 /** Tag Types IDs **/
-#define UT3_ID                       (0x05)
+#define MODEL_A_ID                   (0x05)
 
 /** Define Tag Type for the compilation **/
-#define TAG_ID                       (UT3_ID)
+#ifndef BUILD_DEFINES
+#define TAG_ID                       (MODEL_A_ID)
+#endif
 
 //******************************************************************************
 // Compilation FW Features Switches
@@ -61,8 +63,8 @@ extern const char tag_name[];
 //******************************************************************************
 // Interface
 //******************************************************************************
-uint8_t tag_get_tag_type_id(void);
-char* tag_tag_type_to_string(void);
+uint8_t get_tag_type_id(void);
+char* get_tag_name(void);
 
 #endif /* TAG_DEFINES_H_ */
 

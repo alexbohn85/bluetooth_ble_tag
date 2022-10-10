@@ -10,6 +10,7 @@
 #include "sl_device_init_clocks.h"
 #include "sl_device_init_emu.h"
 #include "pa_conversions_efr32.h"
+#include "btl_interface.h"
 #include "sl_sleeptimer.h"
 #include "sl_bluetooth.h"
 #include "sl_iostream_stdlib_config.h"
@@ -17,6 +18,8 @@
 #include "sl_mbedtls.h"
 #include "nvm3_default.h"
 #include "sl_spidrv_instances.h"
+#include "psa/crypto.h"
+#include "sli_protocol_crypto.h"
 #include "sl_iostream_init_instances.h"
 #include "sl_power_manager.h"
 
@@ -31,6 +34,7 @@ void sl_platform_init(void)
   sl_device_init_lfxo();
   sl_device_init_clocks();
   sl_device_init_emu();
+  bootloader_init();
   nvm3_initDefault();
   sl_power_manager_init();
 }
@@ -46,6 +50,8 @@ void sl_service_init(void)
   sl_hfxo_manager_init();
   sl_iostream_stdlib_disable_buffering();
   sl_mbedtls_init();
+  psa_crypto_init();
+  sli_aes_seed_mask();
   sl_iostream_init_instances();
 }
 

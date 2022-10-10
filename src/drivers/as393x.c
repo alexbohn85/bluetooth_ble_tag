@@ -111,7 +111,8 @@ static void _as39_init_gpio(void)
 {
     CMU_ClockEnable(cmuClock_GPIO, true);
     GPIO_PinModeSet(AS39_LF_DATA_PORT, AS39_LF_DATA_PIN, gpioModeInput, 0);
-    GPIO_IntConfig(AS39_LF_DATA_PORT, AS39_LF_DATA_PIN, false, false, false);
+    //GPIO_IntConfig(AS39_LF_DATA_PORT, AS39_LF_DATA_PIN, false, false, false);         // deprecated use GPIO_ExtIntConfig()
+    GPIO_ExtIntConfig(AS39_LF_DATA_PORT, AS39_LF_DATA_PIN, false, false, false, false);
 #if defined(AS39_WAKE_UP_PRESENT)
     GPIO_PinModeSet(AS39_WAKE_UP_PORT, AS39_WAKE_UP_PIN, gpioModeInput, 0);
 #endif

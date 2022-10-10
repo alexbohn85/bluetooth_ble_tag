@@ -8,7 +8,7 @@
 
 #include "tag_defines.h"
 
-#if TAG_ID == UT3_ID
+#if TAG_ID == MODEL_A_ID
 
 //TODO This pins will later be mapped to UART TX/RX
 //#define BOOTSEL_B1_PORT                        (gpioPortB)

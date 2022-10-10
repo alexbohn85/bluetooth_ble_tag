@@ -8,7 +8,7 @@
 #ifndef AS393X_H_
 #define AS393X_H_
 
-#include <tag_gpio_mapping.h>
+#include "tag_gpio_mapping.h"
 #include "spidrv.h"
 
 //******************************************************************************

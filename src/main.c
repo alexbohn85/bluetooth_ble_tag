@@ -42,7 +42,6 @@
 #include "boot.h"
 #include "cli.h"
 #include "nvm.h"
-#include "iadc.h"
 #include "lf_decoder.h"
 
 

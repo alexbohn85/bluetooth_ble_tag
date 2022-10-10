@@ -14,27 +14,30 @@ tag: ['hardware:rf:band:2400']
 include:
 - path: ''
   file_list:
-  - {path:}
-sdk: {id: gecko_sdk, version: 4.0.1}
+  - {path: ''}
+sdk: {id: gecko_sdk, version: 4.1.2}
 toolchain_settings: []
 component:
-- {id: emlib_rmu}
-- {id: emlib_iadc}
 - {id: EFR32BG22C222F352GM32}
 - {id: iostream_retarget_stdio}
-- {id: bluetooth_feature_connection}
 - {id: bluetooth_feature_gatt_server}
+- {id: bluetooth_feature_sm}
+- {id: gatt_configuration}
+- {id: device_init_lfxo}
+- {id: sl_memory}
+- {id: bluetooth_stack}
+- {id: bluetooth_feature_gatt}
+- {id: udelay}
+- {id: emlib_rmu}
+- {id: emlib_iadc}
+- {id: bluetooth_feature_connection}
 - {id: bluetooth_feature_advertiser}
 - instance: [uart_debug]
   id: iostream_usart
-- {id: bluetooth_feature_sm}
 - {id: emlib_wdog}
 - {id: bluetooth_feature_system}
-- {id: device_init_lfxo}
-- {id: gatt_configuration}
-- {id: sl_memory}
+- {id: cmsis_dsp}
 - {id: bluetooth_feature_scanner}
-- {id: bluetooth_stack}
 - {id: component_catalog}
 - {id: ota_dfu}
 - instance: [as39_spi]
@@ -42,8 +45,6 @@ component:
 - {id: iostream_stdlib_config}
 - {id: bootloader_interface}
 - {id: app_assert}
-- {id: bluetooth_feature_gatt}
-- {id: udelay}
 other_file:
 - {path: create_bl_files.bat}
 - {path: create_bl_files.sh}

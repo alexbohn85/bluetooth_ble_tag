@@ -98,24 +98,4 @@
 // [USART_SL_IOSTREAM_USART_UART_DEBUG]$
 // <<< sl:end pin_tool >>>
 
-//------------------------------------------------------------------------------
-// BLE Tag Customizations
-//------------------------------------------------------------------------------
-#include "tag_gpio_mapping.h"
-
-#undef SL_IOSTREAM_USART_UART_DEBUG_RESTRICT_ENERGY_MODE_TO_ALLOW_RECEPTION
-#undef SL_IOSTREAM_USART_UART_DEBUG_TX_PORT
-#undef SL_IOSTREAM_USART_UART_DEBUG_TX_PIN
-#undef SL_IOSTREAM_USART_UART_DEBUG_RX_PORT
-#undef SL_IOSTREAM_USART_UART_DEBUG_RX_PIN
-
-// Make sure this is 0 by default! CLI.c controls this.
-#define SL_IOSTREAM_USART_UART_DEBUG_RESTRICT_ENERGY_MODE_TO_ALLOW_RECEPTION    0
-// USART1 TX
-#define SL_IOSTREAM_USART_UART_DEBUG_TX_PORT     TAG_GPIO_UART_TX_PORT
-#define SL_IOSTREAM_USART_UART_DEBUG_TX_PIN      TAG_GPIO_UART_TX_PIN
-// USART1 RX
-#define SL_IOSTREAM_USART_UART_DEBUG_RX_PORT     TAG_GPIO_UART_RX_PORT
-#define SL_IOSTREAM_USART_UART_DEBUG_RX_PIN      TAG_GPIO_UART_RX_PIN
-
 #endif
